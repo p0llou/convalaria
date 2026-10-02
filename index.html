@@ -53,7 +53,7 @@
 
   *, *::before, *::after { box-sizing: border-box; }
   html { font-family: var(--font-body); color: var(--ink); }
-  .display, h1, h2, h3, .brand, .hero-hi, .hero-clock, .ring-t, .tmr-t, .sw-t, .tile strong, .mini-focus .t, .mm-node.root, .slide-t, .tithe strong {
+  .display, h1, h2, h3, .brand, .hero-hi, .hero-clock, .ring-t, .tmr-t, .sw-t, .tile strong, .acct-amt, .mini-focus .t, .mm-node.root, .slide-t, .tithe strong {
     font-family: var(--font-display); font-weight: 800; font-variation-settings: 'SOFT' 100, 'WONK' 1; letter-spacing: -.005em; }
   .ph, .ph-duotone, .ph-fill { line-height: 1; vertical-align: -.14em; }
   .btn .ph, .btn .ph-duotone, .btn .ph-fill { font-size: 1.15em; margin-right: 2px; }
@@ -539,6 +539,11 @@
   .mv-main:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
   .mv-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .mv-amt.in { color: var(--good); }
+  .accts { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .acct { background: var(--accent-softer); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .acct-amt { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .acct .btns { margin-top: 4px; }
+  .acct details.past summary { margin: 6px 0 4px; }
 
   /* Plan de premios */
   .aw-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -865,7 +870,8 @@ const defaults = () => ({
   pomo: { work: 25, rest: 5, mode: 'work', endAt: null, left: 25 * 60000, count: 0, countDate: '' },
   sw: { startAt: null, acc: 0 },
   lessons: [], mindmaps: [], places: [], birthdays: [], money: [],
-  moneyCfg: { currency: 'CLP', budget: 0 },
+  moneyCfg: { currency: 'CLP', budget: 0, opening: null },
+  savings: [], savingsMoves: [],
   awards: { students: [], days: {}, verses: {} },
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
@@ -884,7 +890,7 @@ function normalize(raw) {
   if (!s.awards.verses || typeof s.awards.verses !== 'object') s.awards.verses = {};
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
@@ -2301,6 +2307,107 @@ const mvItem = m => {
     <button class="mv-main" data-act="mvEdit" data-id="${m.id}"><strong>${esc(m.note || l)}</strong><span class="lesson-meta">${shortDate(m.date)} · ${l}</span></button>
     <span class="mv-amt ${m.type === 'ingreso' ? 'in' : ''}">${m.type === 'ingreso' ? '+' : '−'}${money(m.amount)}</span></li>`;
 };
+// Saldo de la cuenta principal: parte del saldo fijado y suma o resta lo anotado después (hasta hoy).
+// Los ahorros que pasan por la cuenta principal (main) también la mueven.
+const parseAmount = v => { const t = String(v ?? '').replace(/[\s$]/g, '').replace(/\./g, '').replace(',', '.'); return t === '' ? NaN : Number(t); };
+const fmtIn = n => n == null || n === '' ? '' : String(Math.round(n * 100) / 100).replace('.', ',');
+const signed = n => `${n < 0 ? '−' : ''}${money(Math.abs(n))}`;
+const isPastMv = m => m.date <= ymd(new Date());
+const afterOpening = m => { const o = S.moneyCfg.opening; return !!o && isPastMv(m) && (m.date > o.date || (m.date === o.date && (m.created || 0) > o.at)); };
+function mainBalance() {
+  const o = S.moneyCfg.opening;
+  if (!o) return null;
+  let b = o.amount;
+  S.money.forEach(m => { if (afterOpening(m)) b += m.type === 'ingreso' ? m.amount : -m.amount; });
+  S.savingsMoves.forEach(m => { if (m.main && afterOpening(m)) b += m.type === 'out' ? m.amount : -m.amount; });
+  return b;
+}
+const savMoves = a => S.savingsMoves.filter(m => m.accId === a.id).sort((x, y) => y.date.localeCompare(x.date) || (y.created || 0) - (x.created || 0));
+const savBalance = (a, skip) => (a.initial || 0) + S.savingsMoves.reduce((s, m) => m.accId === a.id && m !== skip && isPastMv(m) ? s + (m.type === 'in' ? m.amount : -m.amount) : s, 0);
+const svItem = m => `<li class="mv"><button class="mv-main" data-act="svMvEdit" data-id="${m.id}"><strong>${esc(m.note || (m.type === 'in' ? 'Ingreso' : 'Retiro'))}</strong><span class="lesson-meta">${shortDate(m.date)}${m.main ? ' · cuenta principal' : ''}</span></button>
+  <span class="mv-amt ${m.type === 'in' ? 'in' : ''}">${m.type === 'in' ? '+' : '−'}${money(m.amount)}</span></li>`;
+function accountsHtml() {
+  const o = S.moneyCfg.opening, mb = mainBalance(), savTotal = S.savings.reduce((s, a) => s + savBalance(a), 0);
+  const main = `<div class="acct"><span class="lesson-meta">${ic('wallet', 'duotone')} Cuenta principal</span>${o
+    ? `<strong class="acct-amt">${signed(mb)}</strong><small class="lesson-meta">Partió en ${signed(o.amount)} el ${shortDate(o.date)}</small>
+      <div class="btns"><button class="btn btn-sm" data-act="openingSet">${ic('pencil-simple')} Corregir saldo</button></div>`
+    : `<p class="hint" style="margin:4px 0 6px">Ingresa cuánto tienes hoy. Desde ahí cada ingreso y gasto se suma o resta solo.</p>
+      <div class="btns"><button class="btn btn-primary btn-sm" data-act="openingSet">${ic('plus')} Ingresar saldo actual</button></div>`}</div>`;
+  const sav = a => {
+    const b = savBalance(a), goal = Number(a.goal) || 0, mv = savMoves(a);
+    return `<div class="acct" id="${a.id}">
+      <button class="mv-main" data-act="savEdit" data-id="${a.id}"><span class="lesson-meta">${ic('piggy-bank', 'duotone')} ${esc(a.name)}</span></button>
+      <strong class="acct-amt">${signed(b)}</strong>
+      ${goal ? `<div class="progress"><span style="width:${Math.max(0, Math.min(100, b / goal * 100))}%"></span></div><small class="lesson-meta">${Math.round(b / goal * 100)}% de ${money(goal)}</small>` : ''}
+      <div class="btns"><button class="btn btn-sm btn-primary" data-act="svIn" data-id="${a.id}">${ic('arrow-down')} Ingresar</button><button class="btn btn-sm" data-act="svOut" data-id="${a.id}">${ic('arrow-up')} Retirar</button></div>
+      ${mv.length ? `<details class="past"><summary>Movimientos (${mv.length})</summary><ul class="list plain">${mv.map(svItem).join('')}</ul></details>` : ''}
+    </div>`;
+  };
+  const totals = S.savings.length ? `<p class="hint" style="margin:12px 0 0">Total en ahorros: <strong>${signed(savTotal)}</strong>${o ? ` · Total entre cuentas: <strong>${signed(mb + savTotal)}</strong>` : ''}</p>` : '';
+  return `<div class="card-h"><h2>Mis cuentas</h2><button class="btn btn-sm" data-act="savNew">${ic('plus')} Cuenta de ahorro</button></div>
+    <div class="accts">${main}${S.savings.map(sav).join('')}</div>${totals}`;
+}
+function openingModal() {
+  openModal(S.moneyCfg.opening ? 'Corregir saldo' : 'Saldo actual', `
+    <label class="fld"><span>¿Cuánto tienes hoy en la cuenta principal?</span><input name="amount" required inputmode="decimal" value="${fmtIn(mainBalance())}" placeholder="255.000"></label>
+    <p class="hint">Desde ahora, cada ingreso y gasto que anotes se suma o resta a este saldo. Lo anotado antes no lo cambia.</p>`, {
+    onSave: fd => {
+      const amount = parseAmount(fd.get('amount'));
+      if (!Number.isFinite(amount)) return 'Ingresa un monto válido.';
+      S.moneyCfg.opening = { amount, date: ymd(new Date()), at: Date.now() };
+      save(); renderAll();
+    },
+  });
+}
+function savModal(a = null) {
+  const x = a || { name: '', initial: 0, goal: 0 };
+  openModal(a ? 'Editar cuenta de ahorro' : 'Nueva cuenta de ahorro', `
+    <label class="fld"><span>Nombre</span><input name="name" maxlength="40" required value="${esc(x.name)}" placeholder="Fondo de emergencia, viaje…"></label>
+    <div class="row2">
+      <label class="fld"><span>Saldo con que parte</span><input name="initial" inputmode="decimal" value="${x.initial ? fmtIn(x.initial) : ''}" placeholder="0"></label>
+      <label class="fld"><span>Meta (opcional)</span><input name="goal" inputmode="decimal" value="${x.goal ? fmtIn(x.goal) : ''}" placeholder="Sin meta"></label>
+    </div>
+    <p class="hint">El saldo con que parte es lo que ya tenías ahorrado; no se descuenta de la cuenta principal.${a ? ' Si eliminas la cuenta, se borran sus movimientos.' : ''}</p>`, {
+    onSave: fd => {
+      const num = k => fd.get(k).trim() ? parseAmount(fd.get(k)) : 0;
+      const initial = num('initial'), goal = num('goal');
+      if (!(initial >= 0) || !(goal >= 0)) return 'Revisa los montos.';
+      const obj = { name: fd.get('name').trim(), initial, goal };
+      if (a) Object.assign(a, obj); else S.savings.push({ id: uid(), created: Date.now(), ...obj });
+      save(); renderAll();
+    },
+    onDelete: a ? () => { S.savings = S.savings.filter(y => y !== a); S.savingsMoves = S.savingsMoves.filter(m => m.accId !== a.id); save(); renderAll(); } : null,
+  });
+}
+function svMoveModal(a, type, m = null) {
+  const x = m || { type, amount: '', date: ymd(new Date()), note: '', main: true };
+  openModal(m ? 'Editar movimiento de ahorro' : `${type === 'in' ? 'Ingresar a' : 'Retirar de'} ${a.name}`, `
+    <div class="row2">
+      <label class="fld"><span>Tipo</span><select name="type"><option value="in" ${x.type === 'in' ? 'selected' : ''}>Ingreso</option><option value="out" ${x.type === 'out' ? 'selected' : ''}>Retiro</option></select></label>
+      <label class="fld"><span>Monto</span><input name="amount" required inputmode="decimal" value="${fmtIn(x.amount)}"></label>
+    </div>
+    <div class="row2">
+      <label class="fld"><span>Fecha</span><input type="date" name="date" required value="${x.date}"></label>
+      <label class="fld"><span>Detalle</span><input name="note" maxlength="80" value="${esc(x.note)}"></label>
+    </div>
+    <label class="toggle"><input type="checkbox" name="main" ${x.main ? 'checked' : ''}> <span data-main-l></span></label>
+    <p class="hint" style="margin-top:10px">En ${esc(a.name)} hay ${money(savBalance(a, m))}.</p>`, {
+    onOpen: f => {
+      const upd = () => { $('[data-main-l]', f).textContent = f.elements.type.value === 'in' ? 'Sale de la cuenta principal' : 'Vuelve a la cuenta principal'; };
+      f.elements.type.onchange = upd; upd();
+    },
+    onSave: fd => {
+      const amount = parseAmount(fd.get('amount')), t = fd.get('type'), avail = savBalance(a, m);
+      if (!(amount > 0)) return 'Ingresa un monto mayor a cero.';
+      if (t === 'out' && amount > avail) return `No alcanza: en ${a.name} hay ${money(avail)}.`;
+      const obj = { type: t, amount, date: fd.get('date'), note: fd.get('note').trim(), main: fd.get('main') === 'on' };
+      if (m) Object.assign(m, obj); else S.savingsMoves.push({ id: uid(), created: Date.now(), accId: a.id, ...obj });
+      save(); renderAll();
+      if (!m) toast({ title: t === 'in' ? 'Ahorro guardado' : 'Retiro anotado', text: `${money(amount)} · ${a.name}`, icon: 'piggy-bank' });
+    },
+    onDelete: m ? () => { S.savingsMoves = S.savingsMoves.filter(y => y !== m); save(); renderAll(); } : null,
+  });
+}
 function renderFinanzas(root) {
   const mv = monthMoves();
   const sum = arr => arr.reduce((s, m) => s + m.amount, 0);
@@ -2319,12 +2426,13 @@ function renderFinanzas(root) {
     <div class="tiles">
       <div class="tile"><span>Ingresos</span><strong>${money(inc)}</strong></div>
       <div class="tile"><span>Gastos</span><strong>${money(exp)}</strong></div>
-      <div class="tile"><span>Balance</span><strong>${bal < 0 ? '−' : ''}${money(Math.abs(bal))}</strong><small>${bal >= 0 ? 'Disponible este mes' : 'Gastaste más de lo que entró'}</small></div>
+      <div class="tile"><span>Balance del mes</span><strong>${bal < 0 ? '−' : ''}${money(Math.abs(bal))}</strong><small>${bal >= 0 ? 'Disponible este mes' : 'Gastaste más de lo que entró'}</small></div>
       <div class="tile"><span>Presupuesto</span>${budget
         ? `<strong>${Math.round(exp / budget * 100)}%</strong><div class="progress" style="margin-top:6px"><span style="width:${Math.min(100, exp / budget * 100)}%"></span></div><small>${money(exp)} de ${money(budget)}</small>`
         : '<small>Defínelo en Ajustes, más abajo</small>'}</div>
     </div>
     <div class="grid">
+      <section class="card span-12">${accountsHtml()}</section>
       <section class="card span-12">
         <div class="card-h"><h2>Anotar rápido</h2></div>
         <form class="fin-form" data-form="mvQuick">
@@ -2627,6 +2735,12 @@ Object.assign(ACT, {
   bdEdit: el => { const b = findById(S.birthdays, el.dataset.id); b && bdModal(b); },
 
   mvNew: () => mvModal(),
+  openingSet: () => openingModal(),
+  savNew: () => savModal(),
+  savEdit: el => { const a = findById(S.savings, el.dataset.id); a && savModal(a); },
+  svIn: el => { const a = findById(S.savings, el.dataset.id); a && svMoveModal(a, 'in'); },
+  svOut: el => { const a = findById(S.savings, el.dataset.id); a && svMoveModal(a, 'out'); },
+  svMvEdit: el => { const m = findById(S.savingsMoves, el.dataset.id), a = m && findById(S.savings, m.accId); a && svMoveModal(a, m.type, m); },
   mvEdit: el => { const m = findById(S.money, el.dataset.id); m && mvModal(m); },
   finNav: el => { finMonth = new Date(finMonth.getFullYear(), finMonth.getMonth() + Number(el.dataset.d), 1); renderAll(); },
   finToday: () => { finMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderAll(); },
@@ -3682,6 +3796,8 @@ const searchSources = () => [
       open: () => { mapView = { c: [p.lat, p.lng], z: 17 }; go('lugares'); setTimeout(() => placeMarkers.get(p.id)?.openPopup(), 900); } })) },
   { label: 'Finanzas', icon: 'wallet', items: () => S.money.map(m => ({ title: m.note || mvCat(m)[0], sub: `${shortDate(m.date)} · ${m.type === 'ingreso' ? '+' : '−'}${money(m.amount)}`, fields: [m.note, mvCat(m)[0]],
       open: () => { const d = fromYmd(m.date); finMonth = new Date(d.getFullYear(), d.getMonth(), 1); go('finanzas'); mvModal(m); } })) },
+  { label: 'Ahorros', icon: 'piggy-bank', items: () => S.savings.map(a => ({ title: a.name, sub: `Ahorro · ${signed(savBalance(a))}`, fields: [a.name],
+      open: () => { go('finanzas'); flash(a.id); } })) },
   { label: 'Mapas mentales', icon: 'brain', items: () => S.mindmaps.flatMap(m => [
       { title: m.title, sub: `${m.nodes.length} ideas`, fields: [m.title], open: () => { mmOpen = m.id; mmSel = null; mmZoom = 1; go('ideas'); } },
       ...m.nodes.map(n => ({ title: n.text, sub: m.title, fields: [n.text], open: () => {
