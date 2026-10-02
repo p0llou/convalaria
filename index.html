@@ -2165,9 +2165,9 @@ async function mountMap() {
   placeMarkers.clear();
   const map = L.map(el);
   placesMap = map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd', maxZoom: 20,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
   if (mapView) map.setView(mapView.c, mapView.z);
   else if (S.places.length) map.fitBounds(L.latLngBounds(S.places.map(p => [p.lat, p.lng])).pad(0.3), { maxZoom: 15 });
