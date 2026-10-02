@@ -899,6 +899,8 @@ function saveLocal() {
   catch { toast({ title: 'No se pudo guardar', text: 'El navegador no tiene espacio o bloquea el guardado.', icon: 'warning' }); }
 }
 function save() { saveLocal(); syncTouch(); }
+// Cambios automáticos (avisos marcados): se sincronizan, pero ceden ante lo que venga de la nube
+function saveBg() { saveLocal(); syncTouch(true); }
 let S = load();
 
 /* ---------- Fotos (IndexedDB, con respaldo en localStorage) ---------- */
@@ -1239,7 +1241,7 @@ function checkReminders(now) {
     alertUser(`Hora de: ${h.name}`, hbGoal(h) > 1 ? `Llevas ${hbCount(h, tk)} de ${hbGoal(h)} hoy.` : 'Márcalo cuando lo hagas.', 'plant',
       [{ label: 'Hecho', primary: true, fn: () => { hbSet(h, tk, hbGoal(h)); renderAll(); } }, { label: 'Después' }]);
   }
-  if (dirty) { save(); renderReminderLists(); }
+  if (dirty) { saveBg(); renderReminderLists(); }
 }
 
 /* ---------- Pomodoro, timers y cronómetro ---------- */
@@ -3529,13 +3531,16 @@ Object.assign(ACT, {
 /* ---------- Sincronización (Firebase) ---------- */
 // Cada clave de S es un documento users/{uid}/data/{clave} con { json, updatedAt, device };
 // las fotos van en users/{uid}/photos/{id}. Gana el cambio más reciente, por clave.
+// Solo se suben claves editadas aquí (syncMeta.dirty[k] = hora de la edición) y nunca
+// antes de recibir la primera foto de la nube: así un dispositivo con datos viejos no pisa la nube.
 const FB_V = '10.14.1';
 const SYNC_KEY = 'convalaria-sync';
 const LOCAL_KEYS = ['lastView', 'plannerView', 'showBlocks'];
 const SYNC_KEYS = Object.keys(defaults()).filter(k => !LOCAL_KEYS.includes(k));
 let syncMeta = (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch { return {}; } })();
 if (!syncMeta.device) syncMeta.device = uid();
-let fb = null, syncUser = null, syncUnsub = null, syncState = 'idle', syncErr = '', pushTimer = null, pushing = false, pushAgain = false, needRender = false;
+if (!syncMeta.dirty) syncMeta.dirty = {};
+let fb = null, syncUser = null, syncUnsub = null, syncState = 'idle', syncErr = '', pushTimer = null, pushing = false, pushAgain = false, needRender = false, remoteReady = false;
 const pendingDocs = new Map();
 const saveMeta = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch {} };
 const fnv = str => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length; };
@@ -3549,9 +3554,23 @@ const FB_ERRORS = {
   'auth/network-request-failed': 'Sin conexión a internet.', 'permission-denied': 'Firebase rechazó el acceso. Revisa las reglas de Firestore.',
 };
 const fbMsg = e => FB_ERRORS[e?.code] || e?.message || String(e);
+const keyHash = k => fnv(JSON.stringify(S[k] ?? null));
+const localHash = Object.fromEntries(SYNC_KEYS.map(k => [k, keyHash(k)]));   // último estado guardado de cada clave
 
-function syncTouch() { if (!syncUser) return; syncMeta.localEditAt = Date.now(); saveMeta(); schedulePush(); }
-function schedulePush(ms = 1500) { if (!syncUser) return; clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, ms); }
+function syncTouch(bg) {
+  const now = Date.now();
+  let any = false;
+  for (const k of SYNC_KEYS) {
+    const h = keyHash(k);
+    if (h === localHash[k]) continue;
+    localHash[k] = h; any = true;
+    syncMeta.dirty[k] = bg ? (syncMeta.dirty[k] ?? 0) : now;
+  }
+  if (!any) return;
+  saveMeta(); schedulePush();
+}
+function markApplied(keys) { keys.forEach(k => { syncMeta.hashes[k] = localHash[k] = keyHash(k); delete syncMeta.dirty[k]; }); }
+function schedulePush(ms = 1500) { if (!syncUser || !remoteReady) return; clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, ms); }
 function syncAgo(t) {
   if (!t) return '';
   const s = Math.round((Date.now() - t) / 1000);
@@ -3597,14 +3616,13 @@ async function fbLoad() {
 }
 async function onAuthChange(user) {
   syncUnsub?.(); syncUnsub = null;
-  syncUser = user;
+  syncUser = user; remoteReady = false;
   if (!user) { setSync('idle'); renderSyncCard(); return; }
   setSync('syncing'); renderSyncCard();
   try {
     const ok = await firstLink(user);
     if (!ok) { await fb.a.signOut(fb.auth); return; }
     listenRemote(user.uid);
-    schedulePush(300);
   } catch (e) { setSync('error', e); }
   renderSyncCard();
 }
@@ -3632,16 +3650,17 @@ async function firstLink(user) {
   const snap = await f.getDocs(f.collection(db, 'users', user.uid, 'data'));
   const remote = [];
   snap.forEach(d => remote.push([d.id, d.data()]));
-  const fresh = { uid: user.uid, device: syncMeta.device, config: syncMeta.config, hashes: {}, times: {}, photos: {} };
-  if (!remote.length) { syncMeta = fresh; saveMeta(); return true; }   // nube vacía: se sube todo
+  const all = () => Object.fromEntries(SYNC_KEYS.map(k => [k, Date.now()]));
+  const fresh = { uid: user.uid, device: syncMeta.device, config: syncMeta.config, hashes: {}, times: {}, photos: {}, dirty: {} };
+  if (!remote.length) { syncMeta = { ...fresh, dirty: all() }; saveMeta(); return true; }   // nube vacía: se sube todo
   const hasLocal = JSON.stringify(syncPart(S)) !== JSON.stringify(syncPart(defaults()));
   const choice = hasLocal ? await askFirstSync() : 'cloud';
   if (choice === 'cancel') { toast({ title: 'Sincronización cancelada', text: 'No se cambió nada.', icon: 'cloud-slash' }); return false; }
   syncMeta = fresh;
   if (choice === 'cloud') {
-    remote.forEach(([k, d]) => applyRemote(k, d));
-    S = normalize(S); saveLocal(); applyDecor(); renderAll(); fetchPhotos();
-  }
+    const keys = remote.filter(([k, d]) => applyRemote(k, d)).map(([k]) => k);
+    S = normalize(S); markApplied(keys); saveLocal(); applyDecor(); renderAll(); fetchPhotos();
+  } else syncMeta.dirty = all();
   saveMeta();
   return true;
 }
@@ -3657,20 +3676,21 @@ function listenRemote(uid) {
     const list = [];
     snap.docChanges().forEach(ch => { if (ch.type !== 'removed' && !ch.doc.metadata.hasPendingWrites) list.push([ch.doc.id, ch.doc.data()]); });
     ingest(list);
+    if (!remoteReady) { remoteReady = true; schedulePush(300); }
     if (!pushing) setSync(navigator.onLine ? 'ok' : 'offline');
   }, e => setSync('error', e));
 }
 function ingest(list) {
   if (syncBusy()) { list.forEach(([k, d]) => pendingDocs.set(k, d)); return; }
-  let changed = false;
+  const keys = [];
   for (const [k, d] of list) {
     if (!SYNC_KEYS.includes(k) || d.device === syncMeta.device || (d.updatedAt || 0) <= (syncMeta.times[k] || 0)) continue;
-    const localDirty = fnv(JSON.stringify(S[k] ?? null)) !== syncMeta.hashes[k];
-    if (localDirty && (syncMeta.localEditAt || 0) > d.updatedAt) continue;   // lo local es más nuevo: se sube después
-    if (applyRemote(k, d)) changed = true;
+    if ((syncMeta.dirty[k] ?? -1) > (d.updatedAt || 0)) continue;   // lo editado aquí es más nuevo: se sube después
+    if (applyRemote(k, d)) keys.push(k);
   }
-  if (!changed) return;
-  S = normalize(S); saveLocal(); saveMeta(); applyDecor(); refreshAfterRemote(); fetchPhotos();
+  if (!keys.length) return;
+  S = normalize(S); markApplied(keys); saveLocal(); saveMeta(); applyDecor(); refreshAfterRemote(); fetchPhotos();
+  if (Object.keys(syncMeta.dirty).length) schedulePush();
 }
 function flushRemote() { if (!pendingDocs.size || syncBusy()) return; const list = [...pendingDocs]; pendingDocs.clear(); ingest(list); }
 ['#modal', '#present', '#practice'].forEach(sel => $(sel).addEventListener('close', () => setTimeout(flushRemote, 50)));
@@ -3683,22 +3703,25 @@ document.addEventListener('focusout', () => setTimeout(() => {
   if (needRender && !document.activeElement?.matches('input, textarea, select, [contenteditable="true"]')) { needRender = false; renderAll(); }
 }, 60));
 async function pushNow() {
-  if (!syncUser || !fb) return;
+  if (!syncUser || !fb || !remoteReady) return;
   if (!navigator.onLine) { setSync('offline'); return; }
   if (pushing) { pushAgain = true; return; }
   pushing = true; setSync('syncing');
   try {
     const { f, db } = fb, uidU = syncUser.uid, now = Date.now(), batch = f.writeBatch(db), done = [];
-    for (const k of SYNC_KEYS) {
-      const json = JSON.stringify(S[k] ?? null), h = fnv(json);
-      if (h === syncMeta.hashes[k]) continue;
+    for (const k of Object.keys(syncMeta.dirty)) {
+      if (!SYNC_KEYS.includes(k)) { delete syncMeta.dirty[k]; continue; }
+      const p = pendingDocs.get(k);
+      if (p && (syncMeta.dirty[k] || 0) <= (p.updatedAt || 0)) continue;   // hay algo más nuevo de la nube esperando
+      const json = JSON.stringify(S[k] ?? null), h = fnv(json), ed = syncMeta.dirty[k];
+      if (h === syncMeta.hashes[k]) { delete syncMeta.dirty[k]; continue; }
       if (json.length > 950000) { toast({ title: 'Una sección es demasiado grande para sincronizar', text: k, icon: 'cloud-warning' }); continue; }
       batch.set(f.doc(db, 'users', uidU, 'data', k), { json, updatedAt: now, device: syncMeta.device });
-      done.push([k, h]);
+      done.push([k, h, ed]);
     }
     if (done.length) {
       await batch.commit();
-      done.forEach(([k, h]) => { syncMeta.hashes[k] = h; syncMeta.times[k] = now; });
+      done.forEach(([k, h, ed]) => { syncMeta.hashes[k] = h; syncMeta.times[k] = now; if (syncMeta.dirty[k] === ed) delete syncMeta.dirty[k]; });
     }
     await pushPhotos();
     saveMeta(); setSync('ok');

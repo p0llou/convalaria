@@ -1,6 +1,6 @@
 // Service worker de "Convalaria": la app abre sin conexión.
 // Subir VERSION cuando cambien los archivos precacheados.
-const VERSION = 'convalaria-v8';
+const VERSION = 'convalaria-v9';
 const SHELL = [
   './',
   './index.html',
