@@ -3581,7 +3581,7 @@ function syncCardHtml() {
     <form data-form="fbConfig" class="fld"><textarea name="cfg" rows="7" required spellcheck="false" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  authDomain: &quot;….firebaseapp.com&quot;,&#10;  projectId: &quot;…&quot;,&#10;  …&#10;};"></textarea>
       <button class="btn btn-primary" style="margin-top:10px;align-self:flex-start">${ic('plug')} Conectar</button></form>`;
   const forget = `<button type="button" class="btn btn-sm" data-act="fbForget">Quitar configuración</button>`;
-  if (!web) return `${head}<p class="hint" style="margin-top:8px">Configuración guardada (proyecto <code>${esc(syncMeta.config.projectId)}</code>). Para iniciar sesión abre Convalaria desde su dirección web (tu sitio en Netlify o http://localhost), no como archivo.</p>${forget}`;
+  if (!web) return `${head}<p class="hint" style="margin-top:8px">Configuración guardada (proyecto <code>${esc(syncMeta.config.projectId)}</code>). Para iniciar sesión abre Convalaria desde su dirección web (p0llou.github.io/convalaria o http://localhost), no como archivo.</p>${forget}`;
   if (!fb) return `${head}<p class="sync-status ${syncState === 'error' ? 'err' : ''}">${syncState === 'error' ? `${ic('cloud-warning')} No pude cargar Firebase: ${esc(syncErr)}` : 'Cargando…'}</p>${forget}`;
   if (!syncUser) return `${head}
     <p class="hint" style="margin-top:8px">Inicia sesión para sincronizar. Usa la misma cuenta en todos tus dispositivos.</p>
