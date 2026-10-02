@@ -872,7 +872,7 @@ const defaults = () => ({
   lessons: [], mindmaps: [], places: [], birthdays: [], money: [],
   moneyCfg: { currency: 'CLP', budget: 0, opening: null },
   savings: [], savingsMoves: [], owed: [],
-  awards: { students: [], days: {}, verses: {} },
+  awards: { students: [], days: {} },
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
@@ -887,7 +887,7 @@ function normalize(raw) {
   s.awards = Object.assign(defaults().awards, raw?.awards);
   if (!Array.isArray(s.awards.students)) s.awards.students = [];
   if (!s.awards.days || typeof s.awards.days !== 'object') s.awards.days = {};
-  if (!s.awards.verses || typeof s.awards.verses !== 'object') s.awards.verses = {};
+  delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
    'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
@@ -2746,6 +2746,8 @@ Object.assign(ACT, {
   lessonNew: () => { const l = newLesson(); S.lessons.push(l); syncLessonEvent(l); lessonOpen = l.id; save(); renderAll(); window.scrollTo(0, 0); },
   lessonOpen: el => { lessonOpen = el.dataset.id; renderAll(); window.scrollTo(0, 0); },
   lessonBack: () => { lessonOpen = null; renderAll(); },
+  awLesson: el => { lessonOpen = el.dataset.id; go('estudio'); window.scrollTo(0, 0); },
+  awLessonNew: () => { const l = { ...newLesson(), date: awDate }; S.lessons.push(l); syncLessonEvent(l); lessonOpen = l.id; save(); go('estudio'); window.scrollTo(0, 0); },
   lessonFilter: el => { lessonFilter = el.dataset.f; renderAll(); },
   lessonPresent: el => { const l = findById(S.lessons, el.dataset.id); l && openPresent(l); },
   lessonPrint: () => { const l = openLesson(); l && printLesson(l); },
@@ -2942,11 +2944,11 @@ function awStudentEdit(st) {
   });
 }
 function awVerseHtml() {
-  const vId = S.awards.verses[awDate], vv = vId && findById(S.verses, vId);
-  const opts = [...S.verses].sort((a, b) => a.ref.localeCompare(b.ref, 'es')).map(v => `<option value="${v.id}" ${v.id === vId ? 'selected' : ''}>${esc(v.ref)}</option>`).join('');
+  const l = S.lessons.find(x => x.date === awDate);
   return `<div class="aw-verse">${ic('book-bookmark', 'duotone')}
-    <label class="toggle">Versículo del día <select class="inp" style="width:auto;padding:6px 10px" data-chg="awVerse"><option value="">Sin asignar</option>${opts}</select></label>
-    ${vv ? `<p class="aw-verse-text">“${esc(vv.text)}”</p>` : S.verses.length ? '' : '<span class="hint" style="margin:0">Agrega versículos en la sección Versículos para asignarlos.</span>'}</div>`;
+    <span class="toggle">Texto áureo${l?.title ? ` · ${esc(l.title)}` : ''}</span>
+    ${l ? `<button class="btn btn-sm" data-act="awLesson" data-id="${l.id}">${ic('book-open-text')} Ver clase</button>` : `<button class="btn btn-sm" data-act="awLessonNew">${ic('plus')} Crear clase</button>`}
+    ${l?.golden ? `<p class="aw-verse-text">“${esc(l.golden)}”</p>` : `<span class="hint" style="margin:0;flex-basis:100%">${l ? 'La clase de este día aún no tiene texto áureo.' : 'No hay clase de estudio bíblico en esta fecha.'}</span>`}</div>`;
 }
 function awCleanDay() {
   const day = S.awards.days[awDate];
@@ -3243,7 +3245,6 @@ function vsModal(v = null, preset = {}) {
     },
     onDelete: v ? () => {
       S.verses = S.verses.filter(y => y !== v);
-      for (const k of Object.keys(S.awards.verses)) if (S.awards.verses[k] === v.id) delete S.awards.verses[k];
       save(); renderAll();
     } : null,
   });
@@ -3343,7 +3344,6 @@ Object.assign(ACT, {
     if (S.vsMode === 'completar') $('#practice .px-gap')?.focus();
   },
 });
-CHG.awVerse = el => { if (el.value) S.awards.verses[awDate] = el.value; else delete S.awards.verses[awDate]; save(); renderAll(); };
 
 /* ---------- Hábitos ---------- */
 const HB_ICONS = 'drop book-open hands-praying barbell person-simple-run moon-stars bed bowl-food pill tooth music-notes pencil-simple broom sun heart leaf coffee brain wallet flower-lotus'.split(' ');
