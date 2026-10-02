@@ -871,7 +871,7 @@ const defaults = () => ({
   sw: { startAt: null, acc: 0 },
   lessons: [], mindmaps: [], places: [], birthdays: [], money: [],
   moneyCfg: { currency: 'CLP', budget: 0, opening: null },
-  savings: [], savingsMoves: [],
+  savings: [], savingsMoves: [], owed: [],
   awards: { students: [], days: {}, verses: {} },
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
@@ -890,7 +890,7 @@ function normalize(raw) {
   if (!s.awards.verses || typeof s.awards.verses !== 'object') s.awards.verses = {};
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
@@ -2289,7 +2289,7 @@ function bdModal(b = null) {
 /* ---------- Finanzas ---------- */
 const GASTO_CATS = { comida: ['Comida', 'fork-knife'], transporte: ['Transporte', 'bus'], casa: ['Casa y cuentas', 'house-line'], salud: ['Salud', 'first-aid'], ropa: ['Ropa y belleza', 't-shirt'],
   ocio: ['Salidas y ocio', 'film-slate'], educacion: ['Educación', 'graduation-cap'], regalos: ['Regalos', 'gift'], iglesia: ['Diezmos y ofrendas', 'church'], ahorro: ['Ahorro', 'piggy-bank'], otro: ['Otros', 'sparkle'] };
-const INGRESO_CATS = { sueldo: ['Sueldo', 'briefcase'], extra: ['Extra', 'coins'], regalo: ['Regalo', 'gift'], otro: ['Otros', 'sparkle'] };
+const INGRESO_CATS = { sueldo: ['Sueldo', 'briefcase'], mesada: ['Mesada', 'hand-coins'], trabajos: ['Trabajos', 'hammer'], extra: ['Extra', 'coins'], regalo: ['Regalo', 'gift'], otro: ['Otros', 'sparkle'] };
 const mvCats = t => t === 'ingreso' ? INGRESO_CATS : GASTO_CATS;
 const mvCat = m => mvCats(m.type)[m.cat] || mvCats(m.type).otro;
 const mvCatOptions = (t, sel) => Object.entries(mvCats(t)).map(([k, [l, i]]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${l}</option>`).join('');
@@ -2408,6 +2408,60 @@ function svMoveModal(a, type, m = null) {
     onDelete: m ? () => { S.savingsMoves = S.savingsMoves.filter(y => y !== m); save(); renderAll(); } : null,
   });
 }
+// Me deben: al marcar como pagado se anota un ingreso (Trabajos) enlazado con mvId; al desmarcar se borra.
+function owSetPaid(o, on) {
+  if (on && !o.paid) {
+    const mv = { id: uid(), created: Date.now(), type: 'ingreso', amount: o.amount, cat: 'trabajos', date: ymd(new Date()), note: `${o.who}: ${o.what}`.slice(0, 80) };
+    S.money.push(mv);
+    Object.assign(o, { paid: true, paidOn: mv.date, mvId: mv.id });
+  } else if (!on && o.paid) {
+    S.money = S.money.filter(m => m.id !== o.mvId);
+    Object.assign(o, { paid: false, paidOn: null, mvId: null });
+  }
+}
+const owItem = o => `<li class="mv"><input type="checkbox" class="chk" data-chg="owPaid" data-id="${o.id}" ${o.paid ? 'checked' : ''} aria-label="Marcar como pagado">
+  <button class="mv-main" data-act="owEdit" data-id="${o.id}"><strong>${esc(o.what)}</strong><span class="lesson-meta">${o.paid ? `Pagado el ${shortDate(o.paidOn)}` : shortDate(o.date)}${o.paid ? '' : ` · ${esc(o.who)}`}</span></button>
+  <span class="mv-amt ${o.paid ? 'in' : ''}">${money(o.amount)}</span></li>`;
+function owedHtml() {
+  const pend = S.owed.filter(o => !o.paid).sort((a, b) => a.date.localeCompare(b.date)), paid = S.owed.filter(o => o.paid).sort((a, b) => (b.paidOn || '').localeCompare(a.paidOn || ''));
+  const groups = new Map();
+  pend.forEach(o => { if (!groups.has(o.who)) groups.set(o.who, []); groups.get(o.who).push(o); });
+  const total = pend.reduce((s, o) => s + o.amount, 0);
+  return `<div class="card-h"><h2>Me deben</h2><button class="btn btn-sm" data-act="owNew">${ic('plus')} Anotar</button></div>
+    ${pend.length ? `<p class="hint">Pendiente: <strong>${money(total)}</strong>. Al marcarlo como pagado se suma a tu saldo como ingreso.</p>` : empty(paid.length ? 'Te pagaron todo' : 'Nadie te debe nada', 'hand-coins')}
+    ${[...groups].map(([who, items]) => `<div class="card-h" style="margin:14px 0 4px"><h3 class="sub-h" style="margin:0">${esc(who)} · ${money(items.reduce((s, o) => s + o.amount, 0))}</h3>
+      ${items.length > 1 ? `<button class="btn btn-sm" data-act="owPayAll" data-who="${esc(who)}">${ic('check-circle')} Me pagó todo</button>` : ''}</div>
+      <ul class="list plain">${items.map(owItem).join('')}</ul>`).join('')}
+    ${paid.length ? `<details class="past"><summary>Pagados (${paid.length})</summary><ul class="list plain">${paid.map(owItem).join('')}</ul></details>` : ''}`;
+}
+function owModal(o = null) {
+  const last = S.owed.at(-1)?.who || 'Papá', names = [...new Set(S.owed.map(y => y.who))];
+  const x = o || { who: last, what: '', amount: '', date: ymd(new Date()) };
+  openModal(o ? 'Editar lo que me deben' : 'Anotar lo que me deben', `
+    <div class="row2">
+      <label class="fld"><span>Quién</span><input name="who" list="owWho" maxlength="40" required value="${esc(x.who)}"></label>
+      <label class="fld"><span>Monto</span><input name="amount" required inputmode="decimal" value="${fmtIn(x.amount)}"></label>
+    </div>
+    <datalist id="owWho">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="row2">
+      <label class="fld"><span>Por qué</span><input name="what" maxlength="80" required value="${esc(x.what)}" placeholder="Trabajo, compra…"></label>
+      <label class="fld"><span>Fecha</span><input type="date" name="date" required value="${x.date}"></label>
+    </div>
+    ${o?.paid ? `<p class="hint">Pagado el ${shortDate(o.paidOn)}; está anotado como ingreso en Movimientos.</p>` : ''}`, {
+    onSave: fd => {
+      const amount = parseAmount(fd.get('amount'));
+      if (!(amount > 0)) return 'Ingresa un monto mayor a cero.';
+      const obj = { who: fd.get('who').trim(), what: fd.get('what').trim(), amount, date: fd.get('date') };
+      if (o) {
+        Object.assign(o, obj);
+        const mv = o.paid && findById(S.money, o.mvId);
+        if (mv) Object.assign(mv, { amount, note: `${o.who}: ${o.what}`.slice(0, 80) });
+      } else S.owed.push({ id: uid(), created: Date.now(), paid: false, paidOn: null, mvId: null, ...obj });
+      save(); renderAll();
+    },
+    onDelete: o ? () => { S.owed = S.owed.filter(y => y !== o); save(); renderAll(); } : null,
+  });
+}
 function renderFinanzas(root) {
   const mv = monthMoves();
   const sum = arr => arr.reduce((s, m) => s + m.amount, 0);
@@ -2433,6 +2487,7 @@ function renderFinanzas(root) {
     </div>
     <div class="grid">
       <section class="card span-12">${accountsHtml()}</section>
+      <section class="card span-12">${owedHtml()}</section>
       <section class="card span-12">
         <div class="card-h"><h2>Anotar rápido</h2></div>
         <form class="fin-form" data-form="mvQuick">
@@ -2736,6 +2791,15 @@ Object.assign(ACT, {
 
   mvNew: () => mvModal(),
   openingSet: () => openingModal(),
+  owNew: () => owModal(),
+  owEdit: el => { const o = findById(S.owed, el.dataset.id); o && owModal(o); },
+  owPayAll: el => {
+    const items = S.owed.filter(o => !o.paid && o.who === el.dataset.who), sum = items.reduce((s, o) => s + o.amount, 0);
+    if (!items.length || !confirm(`¿${el.dataset.who} te pagó todo (${money(sum)})?`)) return;
+    items.forEach(o => owSetPaid(o, true));
+    save(); renderAll();
+    toast({ title: 'Todo pagado', text: `${money(sum)} sumado a tu saldo`, icon: 'hand-coins' });
+  },
   savNew: () => savModal(),
   savEdit: el => { const a = findById(S.savings, el.dataset.id); a && savModal(a); },
   svIn: el => { const a = findById(S.savings, el.dataset.id); a && svMoveModal(a, 'in'); },
@@ -2758,6 +2822,11 @@ Object.assign(ACT, {
 Object.assign(CHG, {
   lessonStatus: el => { const l = openLesson(); if (l) { l.status = el.value; save(); } },
   mvType: el => { el.form.elements.cat.innerHTML = mvCatOptions(el.value); },
+  owPaid: el => {
+    const o = findById(S.owed, el.dataset.id); if (!o) return;
+    owSetPaid(o, el.checked); save(); renderAll();
+    if (el.checked) toast({ title: 'Pagado', text: `${money(o.amount)} sumado a tu saldo`, icon: 'hand-coins' });
+  },
   currency: el => { S.moneyCfg.currency = el.value; save(); renderAll(); },
   budget: el => { S.moneyCfg.budget = Math.max(0, Number(el.value) || 0); save(); renderAll(); },
 });
@@ -3796,6 +3865,8 @@ const searchSources = () => [
       open: () => { mapView = { c: [p.lat, p.lng], z: 17 }; go('lugares'); setTimeout(() => placeMarkers.get(p.id)?.openPopup(), 900); } })) },
   { label: 'Finanzas', icon: 'wallet', items: () => S.money.map(m => ({ title: m.note || mvCat(m)[0], sub: `${shortDate(m.date)} · ${m.type === 'ingreso' ? '+' : '−'}${money(m.amount)}`, fields: [m.note, mvCat(m)[0]],
       open: () => { const d = fromYmd(m.date); finMonth = new Date(d.getFullYear(), d.getMonth(), 1); go('finanzas'); mvModal(m); } })) },
+  { label: 'Me deben', icon: 'hand-coins', items: () => S.owed.map(o => ({ title: o.what, sub: `${o.who} · ${money(o.amount)} · ${o.paid ? 'Pagado' : 'Pendiente'}`, fields: [o.what, o.who],
+      open: () => { go('finanzas'); owModal(o); } })) },
   { label: 'Ahorros', icon: 'piggy-bank', items: () => S.savings.map(a => ({ title: a.name, sub: `Ahorro · ${signed(savBalance(a))}`, fields: [a.name],
       open: () => { go('finanzas'); flash(a.id); } })) },
   { label: 'Mapas mentales', icon: 'brain', items: () => S.mindmaps.flatMap(m => [
