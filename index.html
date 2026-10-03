@@ -430,6 +430,7 @@
   .slide-t { font-size: clamp(34px, 5vw, 64px); font-weight: 700; line-height: 1.1; margin: 0 0 18px; overflow-wrap: anywhere; }
   .slide-body { font-size: clamp(20px, 2.4vw, 30px); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
   .slide-truth { font-size: clamp(28px, 3.6vw, 46px); font-weight: 700; line-height: 1.3; }
+  .slide-ref { margin: 10px 0 0; font-weight: 700; color: var(--muted); }
   .slide-golden { font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-style: italic; font-weight: 600; font-size: clamp(26px, 3.2vw, 40px); line-height: 1.2; margin: 18px 0 0; color: var(--accent-strong); }
   .present-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
@@ -650,6 +651,7 @@
   .hb-ic span { display: grid; place-items: center; font-size: 20px; color: var(--accent-strong); background: var(--accent-softer); }
   .aw-verse { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--accent-softer); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; }
   .aw-verse > i { font-size: 22px; color: var(--accent-strong); }
+  .aw-verse-text small { font-family: var(--font-body); font-style: normal; font-weight: 700; color: var(--muted); }
   .aw-verse-text { margin: 0; flex-basis: 100%; font-family: var(--font-display); font-style: italic; font-weight: 500; font-variation-settings: 'SOFT' 100, 'WONK' 1; }
 
   /* Versículos */
@@ -1746,7 +1748,7 @@ const LESSON_STATUS = { idea: 'Idea', preparando: 'Preparando', lista: 'Lista', 
 let lessonOpen = null, lessonFilter = 'todas', present = null;
 const lessonProgress = l => LESSON_FIELDS.filter(k => String(l[k] || '').trim()).length;
 const nextSunday = () => { const d = new Date(); return addDays(d, (7 - d.getDay()) % 7); };
-const newLesson = () => ({ id: uid(), date: ymd(nextSunday()), title: '', reading: '', golden: '', passage: '', objective: '', development: '', truth: '', notes: '',
+const newLesson = () => ({ id: uid(), date: ymd(nextSunday()), title: '', reading: '', golden: '', goldenText: '', passage: '', objective: '', development: '', truth: '', notes: '',
   status: 'idea', group: '', attendance: '', reflection: '', evId: null, created: Date.now() });
 
 function syncLessonEvent(l) {
@@ -1758,6 +1760,54 @@ function syncLessonEvent(l) {
   }
   ev.title = 'Escuela dominical' + (l.title.trim() ? ': ' + l.title.trim() : '');
   ev.date = l.date; ev.lessonId = l.id;
+}
+// Texto áureo: al escribir la referencia (ej. "Hechos 12:13") se trae el texto RVR1960 desde bolls.life (gratis, sin clave).
+// Índice + 1 = número de libro en bolls.life. Nombres sin tildes ni espacios (ver bookKey).
+const BIBLE_BOOKS = [
+  'genesis gn gen', 'exodo ex exo', 'levitico lv lev', 'numeros nm num', 'deuteronomio dt deut', 'josue jos', 'jueces jue jc', 'rut rt',
+  '1samuel 1s 1sa 1sam', '2samuel 2s 2sa 2sam', '1reyes 1r 1re 1rey', '2reyes 2r 2re 2rey', '1cronicas 1cr 1cro', '2cronicas 2cr 2cro', 'esdras esd',
+  'nehemias neh', 'ester est', 'job jb', 'salmos salmo sal sl', 'proverbios pr pro prov', 'eclesiastes ec ecl',
+  'cantares cantardeloscantares cnt cant', 'isaias is isa', 'jeremias jr jer', 'lamentaciones lm lam', 'ezequiel ez eze', 'daniel dn dan',
+  'oseas os', 'joel jl', 'amos am', 'abdias abd', 'jonas jon', 'miqueas mi miq', 'nahum nah', 'habacuc hab', 'sofonias sof', 'hageo hag',
+  'zacarias zac', 'malaquias mal', 'mateo mt mat', 'marcos mr mc mar', 'lucas lc luc', 'juan jn', 'hechos hch hech', 'romanos ro rom',
+  '1corintios 1co 1cor', '2corintios 2co 2cor', 'galatas ga gal', 'efesios ef', 'filipenses fil flp', 'colosenses col', '1tesalonicenses 1ts 1tes',
+  '2tesalonicenses 2ts 2tes', '1timoteo 1ti 1tim', '2timoteo 2ti 2tim', 'tito tit', 'filemon flm', 'hebreos he heb', 'santiago stg sant',
+  '1pedro 1p 1pe 1ped', '2pedro 2p 2pe 2ped', '1juan 1jn', '2juan 2jn', '3juan 3jn', 'judas jud', 'apocalipsis ap apoc'];
+const BOOK_ID = new Map(BIBLE_BOOKS.flatMap((s, i) => s.split(' ').map(n => [n, i + 1])));
+const bookKey = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[\s.ºª°]/g, '');
+function parseRef(ref) {
+  const m = String(ref).trim().match(/^(.+?)\s*(\d+)\s*[:.]\s*(\d+)(?:\s*[-–]\s*(\d+))?$/);
+  const book = m && BOOK_ID.get(bookKey(m[1]));
+  if (!book) return null;
+  const a = +m[3], b = m[4] ? +m[4] : a;
+  return b >= a ? { book, ch: +m[2], a, b } : null;
+}
+const bibleCache = new Map();
+async function fetchVerses(ref) {
+  const r = parseRef(ref);
+  if (!r) throw new Error('ref');
+  const key = `${r.book}/${r.ch}`;
+  if (!bibleCache.has(key)) bibleCache.set(key, fetch(`https://bolls.life/get-text/RV1960/${key}/`)
+    .then(res => { if (!res.ok) throw new Error('net'); return res.json(); })
+    .catch(e => { bibleCache.delete(key); throw e; }));
+  const vs = (await bibleCache.get(key)).filter(v => v.verse >= r.a && v.verse <= r.b);
+  if (!vs.length) throw new Error('ref');
+  return vs.map(v => v.text.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '')).join(' ').replace(/\s+/g, ' ').trim();
+}
+async function fillGolden(l) {
+  const id = l.id, ref = l.golden.trim(), msg = t => $$('[data-golden-msg]').forEach(e => e.textContent = t);
+  const put = t => { l.goldenText = t; save(); $$('[data-f="goldenText"]').forEach(e => e.value = t); };
+  if (!ref) { put(''); msg(''); return; }
+  msg('Buscando el texto…');
+  try {
+    const text = await fetchVerses(ref);
+    l = findById(S.lessons, id);
+    if (!l || l.golden.trim() !== ref) return;
+    put(text); msg('Texto RVR1960 traído de bolls.life. Puedes corregirlo.');
+  } catch (e) {
+    if (findById(S.lessons, id)?.golden.trim() !== ref) return;
+    msg(e.message === 'ref' ? 'No reconocí la referencia. Escríbela como “Hechos 12:13” o “Juan 3:16-18”.' : 'No pude traer el texto (¿sin conexión?). Puedes escribirlo a mano.');
+  }
 }
 function removeLesson(l) {
   S.events = S.events.filter(e => e.id !== l.evId);
@@ -1818,9 +1868,11 @@ function renderLessonEditor(root, l) {
       <div class="guide-top">
         <label class="fld"><span>Lectura bíblica</span><input data-inp="lesson" data-f="reading" value="${esc(l.reading)}" placeholder="Ej. Romanos 8:1-17"></label>
         <label class="fld"><span>Fecha</span><input type="date" data-inp="lesson" data-f="date" value="${l.date}"></label>
-        <label class="fld"><span>Texto áureo</span><input data-inp="lesson" data-f="golden" value="${esc(l.golden)}" placeholder="Versículo clave de la clase"></label>
+        <label class="fld"><span>Texto áureo</span><input data-inp="lesson" data-chg="golden" data-f="golden" value="${esc(l.golden)}" placeholder="Ej. Hechos 12:13"></label>
         <label class="fld"><span>Título</span><input data-inp="lesson" data-f="title" value="${esc(l.title)}" placeholder="Título de la clase"></label>
       </div>
+      <label class="fld" style="margin-top:12px"><span>Texto áureo completo · RVR1960</span><textarea rows="2" data-inp="lesson" data-f="goldenText" placeholder="Se completa solo al escribir la referencia del texto áureo">${esc(l.goldenText || '')}</textarea></label>
+      <p class="hint" data-golden-msg></p>
       <div class="guide-prog"><div class="progress"><span data-lesson-bar style="width:${p / 9 * 100}%"></span></div><span class="lesson-meta" data-lesson-count>${p}/9 partes completas</span></div>
     </section>
     <div class="guide">
@@ -1842,6 +1894,7 @@ function renderLessonEditor(root, l) {
       </div>
       <label class="fld" style="margin-top:12px"><span>¿Cómo salió? Preguntas, peticiones, qué mejorar</span><textarea rows="4" data-inp="lesson" data-f="reflection">${esc(l.reflection)}</textarea></label>
     </section>`;
+  if (l.golden && l.goldenText === undefined) fillGolden(l); // clases anotadas antes de traer el texto
 }
 function updateLessonProgress(l) {
   const p = lessonProgress(l);
@@ -1867,7 +1920,7 @@ function drawPresent() {
     ? `<div class="slide-k">${l.date ? cap(fmtLong(fromYmd(l.date))) : 'Escuela dominical'}</div>
        <h2 class="slide-t">${esc(l.title) || 'Clase'}</h2>
        ${l.reading ? `<p class="slide-body">${ic('book-open')} ${esc(l.reading)}</p>` : ''}
-       ${l.golden ? `<p class="slide-golden">“${esc(l.golden)}”</p>` : ''}`
+       ${l.golden ? `<p class="slide-golden">“${esc(l.goldenText || l.golden)}”</p>${l.goldenText ? `<p class="slide-ref">${esc(l.golden)}</p>` : ''}` : ''}`
     : `<div class="slide-k">${s.k}</div><div class="slide-body ${s.big ? 'slide-truth' : ''}">${esc(s.body)}</div>`;
   $('#present').innerHTML = `<div class="present-in">
     <div class="present-top"><span class="present-time" data-present-time>00:00</span>
@@ -1908,6 +1961,7 @@ function printLesson(l) {
     <div class="pg-top">
       <div><b>Lectura Bíblica:</b>${esc(l.reading)}</div><div><b>Fecha:</b>${l.date ? fromYmd(l.date).toLocaleDateString('es-CL') : ''}</div>
       <div><b>Texto Áureo:</b>${esc(l.golden)}</div><div><b>Título:</b>${esc(l.title)}</div>
+      ${l.goldenText ? `<div style="grid-column:1/-1">“${esc(l.goldenText)}”</div>` : ''}
     </div>
     <div class="pg-grid">
       <div class="pg-col">${box('Datos del pasaje', 'passage')}${box('Desarrollo expositor', 'development')}</div>
@@ -2294,6 +2348,8 @@ const GASTO_CATS = { comida: ['Comida', 'fork-knife'], transporte: ['Transporte'
 const INGRESO_CATS = { sueldo: ['Sueldo', 'briefcase'], mesada: ['Mesada', 'hand-coins'], trabajos: ['Trabajos', 'hammer'], extra: ['Extra', 'coins'], regalo: ['Regalo', 'gift'], otro: ['Otros', 'sparkle'] };
 const mvCats = t => t === 'ingreso' ? INGRESO_CATS : GASTO_CATS;
 const mvCat = m => mvCats(m.type)[m.cat] || mvCats(m.type).otro;
+// Diezmo: solo ingresos marcados. Los anotados antes de la casilla no tienen `tithe` y cuentan.
+const countsTithe = m => m.type === 'ingreso' && m.tithe !== false;
 const mvCatOptions = (t, sel) => Object.entries(mvCats(t)).map(([k, [l, i]]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${l}</option>`).join('');
 let finMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 function money(n) {
@@ -2413,7 +2469,7 @@ function svMoveModal(a, type, m = null) {
 // Me deben: al marcar como pagado se anota un ingreso (Trabajos) enlazado con mvId; al desmarcar se borra.
 function owSetPaid(o, on) {
   if (on && !o.paid) {
-    const mv = { id: uid(), created: Date.now(), type: 'ingreso', amount: o.amount, cat: 'trabajos', date: ymd(new Date()), note: `${o.who}: ${o.what}`.slice(0, 80) };
+    const mv = { id: uid(), created: Date.now(), type: 'ingreso', amount: o.amount, cat: 'trabajos', tithe: false, date: ymd(new Date()), note: `${o.who}: ${o.what}`.slice(0, 80) };
     S.money.push(mv);
     Object.assign(o, { paid: true, paidOn: mv.date, mvId: mv.id });
   } else if (!on && o.paid) {
@@ -2472,6 +2528,7 @@ function renderFinanzas(root) {
   mv.filter(m => m.type === 'gasto').forEach(m => { byCat[m.cat] = (byCat[m.cat] || 0) + m.amount; });
   const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]), maxC = Math.max(1, ...cats.map(c => c[1]));
   const tithe = byCat.iglesia || 0, budget = Number(S.moneyCfg.budget) || 0;
+  const titheBase = sum(mv.filter(countsTithe));
   const pct = v => exp ? Math.round(v / exp * 100) : 0;
   root.innerHTML = `
     <div class="page-h"><div><h1>Finanzas</h1><p class="sub">${cap(MESES[finMonth.getMonth()])} ${finMonth.getFullYear()}</p></div>
@@ -2494,7 +2551,7 @@ function renderFinanzas(root) {
         <div class="card-h"><h2>Anotar rápido</h2></div>
         <form class="fin-form" data-form="mvQuick">
           <select class="inp" name="type" data-chg="mvType" aria-label="Tipo"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select>
-          <input class="inp" type="number" name="amount" min="0" step="any" required placeholder="Monto" inputmode="decimal" aria-label="Monto">
+          <input class="inp" name="amount" required placeholder="Monto" inputmode="decimal" aria-label="Monto">
           <select class="inp" name="cat" aria-label="Categoría">${mvCatOptions('gasto', 'comida')}</select>
           <input class="inp" name="note" maxlength="80" placeholder="Detalle (opcional)" aria-label="Detalle">
           <button class="btn btn-primary">Añadir</button>
@@ -2506,12 +2563,12 @@ function renderFinanzas(root) {
       </section>
       <section class="card span-5">
         <div class="card-h"><h2>Diezmos y ofrendas</h2></div>
-        <div class="tithe"><div><span class="lesson-meta">Dado este mes</span><strong>${money(tithe)}</strong></div><div><span class="lesson-meta">10% de tus ingresos</span><strong>${money(inc * 0.1)}</strong></div></div>
-        <p class="hint">Anótalos como gasto en la categoría “Diezmos y ofrendas”.</p>
+        <div class="tithe"><div><span class="lesson-meta">Dado este mes</span><strong>${money(tithe)}</strong></div><div><span class="lesson-meta">10% de lo que cuenta</span><strong>${money(titheBase * 0.1)}</strong></div></div>
+        <p class="hint">Anótalos como gasto en la categoría “Diezmos y ofrendas”. Solo suman los ingresos marcados “Cuenta para el diezmo”.</p>
         <h3 class="sub-h">Ajustes</h3>
         <div class="row2">
           <label class="fld"><span>Moneda</span><select data-chg="currency">${['CLP', 'USD', 'EUR', 'MXN', 'ARS', 'PEN', 'COP'].map(c => `<option ${S.moneyCfg.currency === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
-          <label class="fld"><span>Presupuesto mensual</span><input type="number" min="0" step="any" value="${budget || ''}" data-chg="budget" placeholder="0"></label>
+          <label class="fld"><span>Presupuesto mensual</span><input inputmode="decimal" value="${budget ? fmtIn(budget) : ''}" data-chg="budget" placeholder="0"></label>
         </div>
       </section>
       <section class="card span-12">
@@ -2521,22 +2578,27 @@ function renderFinanzas(root) {
     </div>`;
 }
 function mvModal(m = null) {
-  const x = m || { type: 'gasto', amount: '', cat: 'comida', date: defaultMvDate(), note: '' };
+  const x = m || { type: 'gasto', amount: '', cat: 'comida', date: defaultMvDate(), note: '', tithe: false };
   openModal(m ? 'Editar movimiento' : 'Nuevo movimiento', `
     <div class="row2">
       <label class="fld"><span>Tipo</span><select name="type"><option value="gasto" ${x.type === 'gasto' ? 'selected' : ''}>Gasto</option><option value="ingreso" ${x.type === 'ingreso' ? 'selected' : ''}>Ingreso</option></select></label>
-      <label class="fld"><span>Monto</span><input type="number" name="amount" min="0" step="any" required value="${x.amount}" inputmode="decimal"></label>
+      <label class="fld"><span>Monto</span><input name="amount" required inputmode="decimal" value="${fmtIn(x.amount)}"></label>
     </div>
     <div class="row2">
       <label class="fld"><span>Categoría</span><select name="cat">${mvCatOptions(x.type, x.cat)}</select></label>
       <label class="fld"><span>Fecha</span><input type="date" name="date" required value="${x.date}"></label>
     </div>
-    <label class="fld"><span>Detalle</span><input name="note" maxlength="80" value="${esc(x.note)}"></label>`, {
-    onOpen: f => { f.elements.type.onchange = () => { f.elements.cat.innerHTML = mvCatOptions(f.elements.type.value); }; },
+    <label class="fld"><span>Detalle</span><input name="note" maxlength="80" value="${esc(x.note)}"></label>
+    <label class="toggle" data-tithe-l><input type="checkbox" name="tithe" ${x.type === 'ingreso' && countsTithe(x) ? 'checked' : ''}> <span>Cuenta para el diezmo</span></label>`, {
+    onOpen: f => {
+      const upd = () => { $('[data-tithe-l]', f).hidden = f.elements.type.value !== 'ingreso'; };
+      f.elements.type.onchange = () => { f.elements.cat.innerHTML = mvCatOptions(f.elements.type.value); upd(); };
+      upd();
+    },
     onSave: fd => {
-      const amount = Number(fd.get('amount'));
+      const amount = parseAmount(fd.get('amount'));
       if (!(amount > 0)) return 'Ingresa un monto mayor a cero.';
-      const obj = { type: fd.get('type'), amount, cat: fd.get('cat'), date: fd.get('date'), note: fd.get('note').trim() };
+      const obj = { type: fd.get('type'), amount, cat: fd.get('cat'), date: fd.get('date'), note: fd.get('note').trim(), tithe: fd.get('type') === 'ingreso' && fd.get('tithe') === 'on' };
       if (m) Object.assign(m, obj); else S.money.push({ id: uid(), created: Date.now(), ...obj });
       save(); renderAll();
     },
@@ -2825,6 +2887,7 @@ Object.assign(ACT, {
 });
 Object.assign(CHG, {
   lessonStatus: el => { const l = openLesson(); if (l) { l.status = el.value; save(); } },
+  golden: () => { const l = openLesson(); l && fillGolden(l); },
   mvType: el => { el.form.elements.cat.innerHTML = mvCatOptions(el.value); },
   owPaid: el => {
     const o = findById(S.owed, el.dataset.id); if (!o) return;
@@ -2832,7 +2895,7 @@ Object.assign(CHG, {
     if (el.checked) toast({ title: 'Pagado', text: `${money(o.amount)} sumado a tu saldo`, icon: 'hand-coins' });
   },
   currency: el => { S.moneyCfg.currency = el.value; save(); renderAll(); },
-  budget: el => { S.moneyCfg.budget = Math.max(0, Number(el.value) || 0); save(); renderAll(); },
+  budget: el => { const v = parseAmount(el.value); S.moneyCfg.budget = v > 0 ? v : 0; save(); renderAll(); },
 });
 Object.assign(INP, {
   lesson: el => {
@@ -2846,9 +2909,9 @@ Object.assign(INP, {
 });
 Object.assign(FORMS, {
   mvQuick: f => {
-    const amount = Number(f.elements.amount.value);
-    if (!(amount > 0)) return;
-    S.money.push({ id: uid(), created: Date.now(), type: f.elements.type.value, amount, cat: f.elements.cat.value, date: defaultMvDate(), note: f.elements.note.value.trim() });
+    const amount = parseAmount(f.elements.amount.value);
+    if (!(amount > 0)) return toast({ title: 'Revisa el monto', text: 'Ingresa un monto mayor a cero.', icon: 'warning' });
+    S.money.push({ id: uid(), created: Date.now(), type: f.elements.type.value, amount, cat: f.elements.cat.value, date: defaultMvDate(), note: f.elements.note.value.trim(), tithe: false });
     save(); renderAll();
     toast({ title: 'Movimiento anotado', text: money(amount), icon: 'wallet' });
   },
@@ -2950,7 +3013,7 @@ function awVerseHtml() {
   return `<div class="aw-verse">${ic('book-bookmark', 'duotone')}
     <span class="toggle">Texto áureo${l?.title ? ` · ${esc(l.title)}` : ''}</span>
     ${l ? `<button class="btn btn-sm" data-act="awLesson" data-id="${l.id}">${ic('book-open-text')} Ver clase</button>` : `<button class="btn btn-sm" data-act="awLessonNew">${ic('plus')} Crear clase</button>`}
-    ${l?.golden ? `<p class="aw-verse-text">“${esc(l.golden)}”</p>` : `<span class="hint" style="margin:0;flex-basis:100%">${l ? 'La clase de este día aún no tiene texto áureo.' : 'No hay clase de estudio bíblico en esta fecha.'}</span>`}</div>`;
+    ${l?.golden ? `<p class="aw-verse-text">“${esc(l.goldenText || l.golden)}”${l.goldenText ? ` <small>${esc(l.golden)}</small>` : ''}</p>` : `<span class="hint" style="margin:0;flex-basis:100%">${l ? 'La clase de este día aún no tiene texto áureo.' : 'No hay clase de estudio bíblico en esta fecha.'}</span>`}</div>`;
 }
 function awCleanDay() {
   const day = S.awards.days[awDate];
@@ -3870,7 +3933,7 @@ const searchSources = () => [
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
-      fields: [l.title, l.reading, l.golden, l.passage, l.objective, l.development, l.truth, l.notes, l.group, l.reflection],
+      fields: [l.title, l.reading, l.golden, l.goldenText, l.passage, l.objective, l.development, l.truth, l.notes, l.group, l.reflection],
       open: () => { lessonOpen = l.id; go('estudio'); } })) },
   { label: 'Versículos', icon: 'cards', items: () => S.verses.map(v => ({ title: v.ref, sub: VS_STATUS[vsStatus(v)], fields: [v.ref, v.text, (v.tags || []).join(' ')],
       open: () => { go('versiculos'); vsModal(v); } })) },
