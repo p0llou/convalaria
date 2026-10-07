@@ -184,6 +184,16 @@
   .sub-ed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .sub-ed li, .sub-add { display: flex; align-items: center; gap: 8px; }
   .sub-ed .inp, .sub-add .inp { flex: 1; min-width: 0; width: auto; }
+  .sub-box.rep .sub-ed .chk { display: none; }
+  /* Cuentas regresivas (Inicio) */
+  .cd-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin: -4px 0 20px; }
+  .cd { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--r-md); box-shadow: var(--edge); min-width: 0; }
+  .cd:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .cd-n { font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-weight: 800; font-size: 34px; line-height: 1; color: var(--c); font-variant-numeric: tabular-nums; }
+  .cd-u { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+  .cd-t { grid-column: 1 / -1; margin-top: 6px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cd-d { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
   .chip-n { font-size: 11px; color: var(--muted); margin-left: 4px; white-space: nowrap; }
   .empty { text-align: center; padding: 22px 10px; color: var(--muted); font-weight: 500; }
   .empty > i { font-size: 42px; display: block; margin: 0 auto 6px; color: var(--accent); }
@@ -1132,32 +1142,77 @@ function openModal(title, body, { onSave, onDelete, saveLabel = 'Guardar', noSav
 modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
 
 /* ---------- Actividades del planner ---------- */
-function eventTrigger(e) {
-  if (e.remind === '' || e.remind == null || !e.date) return null;
-  const d = fromYmd(e.date);
+function eventTrigger(e, k = e.date) {
+  if (e.remind === '' || e.remind == null || !k) return null;
+  const d = fromYmd(k);
   d.setMinutes((toMin(e.time) ?? 540) - Number(e.remind));
   return d.getTime();
 }
-// Pasos (sublista) de una actividad: [{ id, text, done }]
+// Repetición: repeat = 'week' (días rdays, 0 = lunes) | 'month' (mismo día que `date`; el último si el mes es más corto).
+// `date` es el inicio y `until` el fin opcional. Hecho, pasos y aviso de cada día van en occ["YYYY-MM-DD"] = { done, sub: [ids], fired }.
+const isRep = e => !!(e.repeat && e.date);
+function occursOn(e, k) {
+  if (!e.date) return false;
+  if (!isRep(e)) return e.date === k;
+  if (k < e.date || (e.until && k > e.until)) return false;
+  const d = fromYmd(k);
+  if (e.repeat === 'week') return (e.rdays || []).includes(dow(d));
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() === Math.min(fromYmd(e.date).getDate(), last);
+}
+function nextOcc(e, from) {
+  if (!isRep(e)) return e.date && e.date >= from ? e.date : null;
+  let d = fromYmd(from > e.date ? from : e.date);
+  for (let i = 0; i < 400; i++, d = addDays(d, 1)) {
+    const k = ymd(d);
+    if (e.until && k > e.until) return null;
+    if (occursOn(e, k)) return k;
+  }
+  return null;
+}
+const occ = (e, k) => isRep(e) ? (e.occ?.[k] || {}) : e;
+const occW = (e, k) => { if (!isRep(e)) return e; e.occ ||= {}; return (e.occ[k] ||= {}); };
+const evDoneOn = (e, k = e.date) => !!occ(e, k).done;
+const repLabel = e => e.repeat === 'month' ? `Cada mes, día ${fromYmd(e.date).getDate()}`
+  : (e.rdays || []).length === 7 ? 'Todos los días' : 'Cada ' + (e.rdays || []).map(i => DIAS_C[i].toLowerCase()).join(', ');
+const daysTo = k => Math.round((fromYmd(k) - fromYmd(ymd(new Date()))) / 864e5);
+// Pasos (sublista) de una actividad: [{ id, text, done }]; en las repetidas el hecho de cada paso va por día
 const evSub = e => Array.isArray(e.sub) ? e.sub : [];
-const subCount = e => { const s = evSub(e); return s.length ? `${s.filter(x => x.done).length}/${s.length}` : ''; };
+const subDoneOn = (e, s, k) => isRep(e) ? (occ(e, k).sub || []).includes(s.id) : !!s.done;
+function setSubDone(e, s, k, v) {
+  if (!isRep(e)) { s.done = v; return; }
+  const o = occW(e, k), set = new Set(o.sub || []);
+  v ? set.add(s.id) : set.delete(s.id);
+  o.sub = [...set];
+}
+const subCount = (e, k = e.date) => { const s = evSub(e); return s.length ? `${s.filter(x => subDoneOn(e, x, k)).length}/${s.length}` : ''; };
 const subRow = s => `<li data-id="${s.id}"><input type="checkbox" class="chk" ${s.done ? 'checked' : ''} aria-label="Paso hecho">
   <input class="inp" maxlength="120" value="${esc(s.text)}" aria-label="Paso"><button type="button" class="icon-btn" data-sub-del aria-label="Quitar paso">${ic('x')}</button></li>`;
 function eventModal(ev = null, preset = {}) {
   const e = ev || { title: '', date: preset.date ?? ymd(new Date()), time: '', end: '', cat: preset.cat || 'personal', notes: '', remind: '' };
+  const rdays = e.rdays || (e.date ? [dow(fromYmd(e.date))] : [0]);
   openModal(ev ? 'Editar actividad' : 'Nueva actividad', `
     <label class="fld"><span>Título</span><input name="title" required maxlength="120" value="${esc(e.title)}" placeholder="¿Qué vas a hacer?"></label>
     <div class="row2">
-      <label class="fld"><span>Fecha</span><input type="date" name="date" ${e.lessonId ? 'required' : ''} value="${e.date}"></label>
+      <label class="fld"><span>${isRep(e) ? 'Desde el' : 'Fecha'}</span><input type="date" name="date" ${e.lessonId ? 'required' : ''} value="${e.date}"></label>
       <label class="fld"><span>Categoría</span><select name="cat">${catOptions(e.cat)}</select></label>
     </div>
     <div class="row2">
       <label class="fld"><span>Desde</span><input type="time" name="time" value="${e.time}"></label>
       <label class="fld"><span>Hasta</span><input type="time" name="end" value="${e.end}"></label>
     </div>
+    ${e.lessonId ? '' : `<div class="row2">
+      <label class="fld"><span>Repetir</span><select name="repeat">${[['', 'No se repite'], ['week', 'Cada semana'], ['month', 'Cada mes']].map(([v, l]) => `<option value="${v}" ${(e.repeat || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="fld" data-rep><span>Hasta (opcional)</span><input type="date" name="until" value="${e.until || ''}"></label>
+    </div>
+    <div class="fld" data-rep-week><span>Días</span>
+      <div class="days">${DIAS_C.map((d, i) => `<label class="daychip"><input type="checkbox" name="rdays" value="${i}" ${rdays.includes(i) ? 'checked' : ''}><span>${d}</span></label>`).join('')}</div>
+    </div>
+    <p class="hint" style="margin:-6px 0 0" data-rep-month></p>`}
     <label class="fld"><span>Recordarme</span><select name="remind">${REMIND_OPTS.map(([v, l]) => `<option value="${v}" ${String(e.remind ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <p class="hint" style="margin:-6px 0 0">Si no tiene hora, te aviso a las 9:00. Sin fecha queda en «Algún día».</p>
-    <div class="sub-box"><span class="sub-lbl">Pasos</span>
+    <label class="toggle"><input type="checkbox" name="countdown" ${e.countdown ? 'checked' : ''}> Mostrar cuenta regresiva en Inicio</label>
+    <div class="sub-box ${isRep(e) ? 'rep' : ''}" data-sub-box><span class="sub-lbl">Pasos</span>
       <ul class="sub-ed" data-sub-list>${evSub(e).map(subRow).join('')}</ul>
       <div class="sub-add"><input class="inp" data-sub-new maxlength="120" placeholder="Agregar paso…" aria-label="Nuevo paso"><button type="button" class="btn btn-sm" data-sub-add>${ic('plus')} Agregar</button></div>
     </div>
@@ -1165,23 +1220,36 @@ function eventModal(ev = null, preset = {}) {
     onSave: (fd, f) => {
       const d = Object.fromEntries(fd);
       if (d.time && d.end && toMin(d.end) <= toMin(d.time)) return 'La hora final debe ser después del inicio.';
+      const repeat = d.repeat || '', rd = fd.getAll('rdays').map(Number).sort();
+      if (repeat && !d.date) return 'Para repetir, elige la fecha de inicio.';
+      if (repeat === 'week' && !rd.length) return 'Elige al menos un día.';
+      if (repeat && d.until && d.until < d.date) return 'La fecha final debe ser después del inicio.';
       const pend = $('[data-sub-new]', f).value.trim();
-      const sub = [...$$('[data-sub-list] li', f).map(li => ({ id: li.dataset.id, text: $('.inp', li).value.trim(), done: $('.chk', li).checked })),
+      const sub = [...$$('[data-sub-list] li', f).map(li => ({ id: li.dataset.id, text: $('.inp', li).value.trim(), done: !repeat && $('.chk', li).checked })),
         ...(pend ? [{ id: uid(), text: pend, done: false }] : [])].filter(s => s.text);
-      const obj = { title: d.title.trim(), date: d.date, time: d.time, end: d.end, cat: d.cat, notes: d.notes.trim(), remind: d.remind, sub };
+      const obj = { title: d.title.trim(), date: d.date, time: d.time, end: d.end, cat: d.cat, notes: d.notes.trim(), remind: d.remind, sub,
+        repeat, rdays: repeat === 'week' ? rd : null, until: repeat ? d.until || '' : '', countdown: !!d.countdown };
       const target = ev || { id: uid(), done: false };
-      const changed = !ev || ev.date !== obj.date || ev.time !== obj.time || ev.remind !== obj.remind;
+      const key = x => JSON.stringify([x.date, x.time, x.remind, x.repeat || '', x.rdays || null, x.until || '']);
+      const changed = !ev || key(ev) !== key(obj);
       const hadPending = evSub(target).some(s => !s.done);
       Object.assign(target, obj);
-      // Todos los pasos listos = actividad hecha; un paso pendiente nuevo la reabre
-      if (sub.length && sub.every(s => s.done)) target.done = true;
-      else if (sub.length && !hadPending) target.done = false;
-      if (changed) { const t = eventTrigger(target); target.fired = t != null && t < Date.now() - 60000; }
+      if (!repeat) {
+        // Todos los pasos listos = actividad hecha; un paso pendiente nuevo la reabre
+        if (sub.length && sub.every(s => s.done)) target.done = true;
+        else if (sub.length && !hadPending) target.done = false;
+      }
+      if (changed) {
+        // Repetidas: los avisos anteriores a este cambio se marcan sin sonar
+        if (repeat) target.repAt = Date.now();
+        else { const t = eventTrigger(target); target.fired = t != null && t < Date.now() - 60000; }
+      }
       if (!ev) S.events.push(target);
       const lesson = target.lessonId && findById(S.lessons, target.lessonId);
       if (lesson) lesson.date = obj.date;
       save(); renderAll();
-      toast({ title: ev ? 'Actividad actualizada' : obj.date ? 'Actividad agendada' : 'Guardada en Algún día', text: `${obj.title}${obj.date ? ' · ' + shortDate(obj.date) + (obj.time ? ' ' + obj.time : '') : ''}`, icon: 'calendar-check' });
+      toast({ title: ev ? 'Actividad actualizada' : obj.date ? 'Actividad agendada' : 'Guardada en Algún día',
+        text: `${obj.title}${repeat ? ' · ' + repLabel(target) : obj.date ? ' · ' + shortDate(obj.date) : ''}${obj.date && obj.time ? ' ' + obj.time : ''}`, icon: repeat ? 'repeat' : 'calendar-check' });
     },
     onOpen: f => {
       const list = $('[data-sub-list]', f), inp = $('[data-sub-new]', f);
@@ -1190,6 +1258,18 @@ function eventModal(ev = null, preset = {}) {
       inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } };
       list.onclick = ev => { const b = ev.target.closest('[data-sub-del]'); if (b) b.closest('li').remove(); };
       list.onkeydown = ev => { if (ev.key === 'Enter' && ev.target.matches('.inp')) { ev.preventDefault(); inp.focus(); } };
+      const rep = f.elements.repeat;
+      if (!rep) return;
+      const sync = () => {
+        const v = rep.value, date = f.elements.date.value;
+        $('[data-rep]', f).hidden = !v;
+        $('[data-rep-week]', f).hidden = v !== 'week';
+        const m = $('[data-rep-month]', f);
+        m.hidden = v !== 'month';
+        m.textContent = date ? `Se repite el día ${fromYmd(date).getDate()} de cada mes (el último día si el mes es más corto).` : 'Elige la fecha de inicio.';
+        $('[data-sub-box]', f).classList.toggle('rep', !!v);
+      };
+      rep.onchange = sync; f.elements.date.addEventListener('change', sync); sync();
     },
     onDelete: ev ? () => {
       S.events = S.events.filter(x => x !== ev);
@@ -1199,15 +1279,15 @@ function eventModal(ev = null, preset = {}) {
     } : null,
   });
 }
-function eventItem(e, showDate = false) {
-  const sub = evSub(e), n = sub.filter(s => s.done).length;
-  const when = [showDate && e.date ? shortDate(e.date) : '', e.time ? e.time + (e.end ? '–' + e.end : '') : e.date ? 'Todo el día' : ''].filter(Boolean).join(' · ');
-  const meta = [when, sub.length ? `${ic('list-checks')} ${n}/${sub.length}` : '', e.remind !== '' && e.remind != null && e.date ? ic('bell') : '', e.notes ? esc(e.notes) : ''].filter(Boolean).join(' · ');
-  return `<li class="ev ${e.done ? 'done' : ''} ${sub.length ? 'has-sub' : ''}" style="${catVars(e.cat)}">
-    <input type="checkbox" class="chk" data-chg="evDone" data-id="${e.id}" ${e.done ? 'checked' : ''} aria-label="Marcar como hecho">
+function eventItem(e, showDate = false, k = e.date) {
+  const sub = evSub(e), n = sub.filter(s => subDoneOn(e, s, k)).length, done = evDoneOn(e, k);
+  const when = [showDate && k ? shortDate(k) : '', e.time ? e.time + (e.end ? '–' + e.end : '') : k ? 'Todo el día' : ''].filter(Boolean).join(' · ');
+  const meta = [when, isRep(e) ? ic('repeat') : '', sub.length ? `${ic('list-checks')} ${n}/${sub.length}` : '', e.remind !== '' && e.remind != null && k ? ic('bell') : '', e.notes ? esc(e.notes) : ''].filter(Boolean).join(' · ');
+  return `<li class="ev ${done ? 'done' : ''} ${sub.length ? 'has-sub' : ''}" style="${catVars(e.cat)}">
+    <input type="checkbox" class="chk" data-chg="evDone" data-id="${e.id}" data-date="${k}" ${done ? 'checked' : ''} aria-label="Marcar como hecho">
     <button class="ev-main" data-act="evEdit" data-id="${e.id}"><span class="ev-t">${esc(e.title)}</span>${meta ? `<span class="ev-m">${meta}</span>` : ''}</button>
     ${e.date ? '' : `<button class="icon-btn ev-go" data-act="evToday" data-id="${e.id}" title="Pasar a hoy" aria-label="Pasar a hoy">${ic('calendar-plus')}</button>`}
-    ${sub.length ? `<ul class="ev-sub">${sub.map(s => `<li class="${s.done ? 'done' : ''}"><input type="checkbox" class="chk" data-chg="subDone" data-id="${e.id}" data-sub="${s.id}" ${s.done ? 'checked' : ''} aria-label="Paso hecho: ${esc(s.text)}"><span>${esc(s.text)}</span></li>`).join('')}
+    ${sub.length ? `<ul class="ev-sub">${sub.map(s => { const sd = subDoneOn(e, s, k); return `<li class="${sd ? 'done' : ''}"><input type="checkbox" class="chk" data-chg="subDone" data-id="${e.id}" data-date="${k}" data-sub="${s.id}" ${sd ? 'checked' : ''} aria-label="Paso hecho: ${esc(s.text)}"><span>${esc(s.text)}</span></li>`; }).join('')}
       <li><div class="progress" style="flex:1"><span style="width:${n / sub.length * 100}%"></span></div></li></ul>` : ''}
   </li>`;
 }
@@ -1218,7 +1298,7 @@ function blockItem(b, showDays = false) {
 }
 function dayAgenda(d, withBlocks = S.showBlocks) {
   const k = ymd(d), w = dow(d);
-  const evs = S.events.filter(e => e.date === k).map(e => ({ k: 'e', t: toMin(e.time) ?? -1, x: e }));
+  const evs = S.events.filter(e => occursOn(e, k)).map(e => ({ k: 'e', t: toMin(e.time) ?? -1, x: e, day: k }));
   const bls = withBlocks ? S.blocks.filter(b => b.days.includes(w)).map(b => ({ k: 'b', t: toMin(b.start), x: b })) : [];
   const bds = S.birthdays.filter(b => bdOn(b, d)).map(b => ({ k: 'bd', t: -2, x: b, d }));
   return [...bds, ...evs, ...bls].sort((a, b) => a.t - b.t);
@@ -1228,7 +1308,7 @@ const bdAgendaItem = (b, d) => {
   return `<li class="ev ev-bd"><span class="blk-ic">${ic('cake', 'duotone')}</span>
     <button class="ev-main" data-act="bdEdit" data-id="${b.id}"><span class="ev-t">Cumpleaños de ${esc(b.name)}</span><span class="ev-m">${age != null ? `Cumple ${age} años` : 'Todo el día'}</span></button></li>`;
 };
-const agendaHtml = items => items.map(i => i.k === 'e' ? eventItem(i.x) : i.k === 'bd' ? bdAgendaItem(i.x, i.d) : blockItem(i.x)).join('');
+const agendaHtml = items => items.map(i => i.k === 'e' ? eventItem(i.x, false, i.day) : i.k === 'bd' ? bdAgendaItem(i.x, i.d) : blockItem(i.x)).join('');
 
 /* ---------- Horario fijo ---------- */
 function blockModal(b = null, preset = {}) {
@@ -1289,14 +1369,20 @@ function renderReminderLists() { $$('[data-reminders]').forEach(el => el.innerHT
 function checkReminders(now) {
   let dirty = false;
   const recent = t => now - t < 6 * 3600e3; // lo muy antiguo se marca sin avisar
+  const today0 = new Date(now);
   for (const e of S.events) {
-    if (e.fired || e.done) continue;
-    const t = eventTrigger(e);
-    if (t == null || t > now) continue;
-    e.fired = true; dirty = true;
-    if (recent(t)) {
-      const day = e.date === ymd(new Date()) ? 'Hoy' : e.date === ymd(addDays(new Date(), 1)) ? 'Mañana' : shortDate(e.date);
-      alertUser(e.title, `${day}${e.time ? ' a las ' + e.time : ''} · ${cat(e.cat).label}`, 'alarm', [{ label: 'Entendido', primary: true }]);
+    // Repetidas: se revisan las fechas de ayer, hoy y mañana (el aviso puede ser 1 día antes)
+    const ks = isRep(e) ? [-1, 0, 1].map(n => ymd(addDays(today0, n))).filter(k => occursOn(e, k)) : [e.date];
+    for (const k of ks) {
+      const o = occ(e, k);
+      if (o.fired || o.done) continue;
+      const t = eventTrigger(e, k);
+      if (t == null || t > now) continue;
+      occW(e, k).fired = true; dirty = true;
+      if (recent(t) && t >= (e.repAt || 0)) {
+        const day = k === ymd(today0) ? 'Hoy' : k === ymd(addDays(today0, 1)) ? 'Mañana' : shortDate(k);
+        alertUser(e.title, `${day}${e.time ? ' a las ' + e.time : ''} · ${cat(e.cat).label}`, 'alarm', [{ label: 'Entendido', primary: true }]);
+      }
     }
   }
   for (const r of S.reminders) {
@@ -1520,8 +1606,11 @@ let pDate = new Date();
 function renderInicio(root) {
   const now = new Date(), k = ymd(now);
   const today = dayAgenda(now, true);
-  const pending = S.events.filter(e => e.date === k && !e.done).length;
-  const nextChurch = S.events.filter(e => e.cat === 'iglesia' && e.date >= k && !e.done && !e.lessonId).sort((a, b) => a.date.localeCompare(b.date) || byTime(a, b))[0];
+  const pending = S.events.filter(e => occursOn(e, k) && !evDoneOn(e, k)).length;
+  const nextChurch = S.events.filter(e => e.cat === 'iglesia' && !e.lessonId).map(e => ({ e, k: nextOcc(e, k) }))
+    .filter(x => x.k && !evDoneOn(x.e, x.k)).sort((a, b) => a.k.localeCompare(b.k) || byTime(a.e, b.e))[0];
+  const countdowns = S.events.filter(e => e.countdown).map(e => ({ e, k: nextOcc(e, k) })).filter(x => x.k)
+    .sort((a, b) => a.k.localeCompare(b.k) || byTime(a.e, b.e)).slice(0, 4);
   const nextLesson = S.lessons.filter(l => l.date && l.date >= k && l.status !== 'impartida').sort((a, b) => a.date.localeCompare(b.date))[0];
   root.innerHTML = `
     <header class="hero ${S.bannerId && IMG.get(S.bannerId) ? 'has-img' : ''}">
@@ -1534,6 +1623,9 @@ function renderInicio(root) {
       <button class="icon-btn hero-edit" data-act="bannerChange" title="Cambiar portada" aria-label="Cambiar foto de portada">${ic('camera')}</button>
       <img class="hero-deco" src="icons/logo.svg" alt="">
     </header>
+    ${countdowns.length ? `<div class="cd-row">${countdowns.map(({ e, k: dk }) => { const n = daysTo(dk); return `<button class="cd" style="${catVars(e.cat)}" data-act="evEdit" data-id="${e.id}">
+      <span class="cd-n">${n === 0 ? 'Hoy' : n}</span><span class="cd-u">${n === 0 ? '¡es el día!' : n === 1 ? 'día' : 'días'}</span>
+      <span class="cd-t">${esc(e.title)}</span><span class="cd-d">${n === 1 ? 'Mañana' : shortDate(dk)}</span></button>`; }).join('')}</div>` : ''}
     <div class="grid">
       <section class="card span-7 feature">
         <div class="card-h"><h2>Hoy</h2><button class="btn btn-sm btn-primary" data-act="evNew" data-date="${k}">${ic('plus')} Añadir</button></div>
@@ -1553,7 +1645,7 @@ function renderInicio(root) {
       <section class="card span-4">
         <div class="card-h"><h2>Versículo de la semana</h2><button class="btn btn-sm" data-act="go" data-view="iglesia">Iglesia</button></div>
         ${S.verse.text ? `<p class="verse-mini">${esc(S.verse.text)}</p><p class="verse-mini-ref">${esc(S.verse.ref)}</p>` : empty('Escríbelo en la sección Iglesia', 'book-open')}
-        ${nextChurch ? `<div class="next-church">${ic('church')} Próximo: <strong>${esc(nextChurch.title)}</strong> · ${shortDate(nextChurch.date)}${nextChurch.time ? ' ' + nextChurch.time : ''}</div>` : ''}
+        ${nextChurch ? `<div class="next-church">${ic('church')} Próximo: <strong>${esc(nextChurch.e.title)}</strong> · ${shortDate(nextChurch.k)}${nextChurch.e.time ? ' ' + nextChurch.e.time : ''}</div>` : ''}
         ${S.verses.some(vsDue) ? `<div class="next-church">${ic('cards')} ${S.verses.filter(vsDue).length} para repasar hoy · <button class="linkish" data-act="go" data-view="versiculos">Repasar</button></div>` : ''}
         ${nextLesson ? `<div class="next-church">${ic('book-open')} Próxima clase: <strong>${esc(nextLesson.title || 'Sin título')}</strong> · ${shortDate(nextLesson.date)} · ${lessonProgress(nextLesson)}/9 listo</div>` : ''}
       </section>
@@ -1608,7 +1700,7 @@ function dayView() {
 function chip(it) {
   const x = it.x;
   if (it.k === 'bd') return `<button class="chip chip-bd" data-act="bdEdit" data-id="${x.id}">${ic('cake')} ${esc(x.name)}</button>`;
-  if (it.k === 'e') return `<button class="chip ${x.done ? 'done' : ''}" style="${catVars(x.cat)}" data-act="evEdit" data-id="${x.id}">${x.time ? `<small>${x.time}</small>` : ''}${esc(x.title)}${subCount(x) ? `<span class="chip-n">${subCount(x)}</span>` : ''}</button>`;
+  if (it.k === 'e') return `<button class="chip ${evDoneOn(x, it.day) ? 'done' : ''}" style="${catVars(x.cat)}" data-act="evEdit" data-id="${x.id}">${x.time ? `<small>${x.time}</small>` : ''}${esc(x.title)}${subCount(x, it.day) ? `<span class="chip-n">${subCount(x, it.day)}</span>` : ''}</button>`;
   return `<button class="chip chip-block" style="${catVars(x.cat)}" data-act="blockEdit" data-id="${x.id}"><small>${x.start}–${x.end}</small>${esc(x.title)}</button>`;
 }
 function weekView() {
@@ -1631,7 +1723,7 @@ function monthView() {
     const d = addDays(start, i), k = ymd(d);
     const evs = [
       ...S.birthdays.filter(b => bdOn(b, d)).map(b => ({ title: b.name, icon: 'cake', style: '--c:#e0679a;--cs:#ffeef5' })),
-      ...S.events.filter(e => e.date === k).sort(byTime).map(e => ({ title: e.title, style: catVars(e.cat) })),
+      ...S.events.filter(e => occursOn(e, k)).sort(byTime).map(e => ({ title: e.title, style: catVars(e.cat) })),
     ];
     cells += `<button class="mcell ${d.getMonth() !== m ? 'out' : ''} ${k === t ? 'today' : ''}" data-act="pGoDay" data-date="${k}" aria-label="${fmtLong(d)}${evs.length ? ', ' + evs.length + ' actividades' : ''}">
       <span class="mnum">${d.getDate()}</span>
@@ -1679,7 +1771,8 @@ function renderHorario(root) {
 
 function renderIglesia(root) {
   const t = ymd(new Date());
-  const up = S.events.filter(e => e.cat === 'iglesia' && e.date >= t).sort((a, b) => a.date.localeCompare(b.date) || byTime(a, b)).slice(0, 12);
+  const up = S.events.filter(e => e.cat === 'iglesia').map(e => ({ e, k: nextOcc(e, t) })).filter(x => x.k)
+    .sort((a, b) => a.k.localeCompare(b.k) || byTime(a.e, b.e)).slice(0, 12);
   const weekly = S.blocks.filter(b => b.cat === 'iglesia');
   const open = S.prayers.filter(p => !p.answered), answered = S.prayers.filter(p => p.answered);
   const prItem = p => `<li class="pr"><input type="checkbox" class="chk" data-chg="prayerDone" data-id="${p.id}" ${p.answered ? 'checked' : ''} aria-label="Marcar como respondida">
@@ -1702,7 +1795,7 @@ function renderIglesia(root) {
       </section>
       <section class="card span-6">
         <div class="card-h"><h2>Próximas actividades</h2></div>
-        ${up.length ? `<ul class="list">${up.map(e => eventItem(e, true)).join('')}</ul>` : empty('Nada agendado. Las actividades con categoría Iglesia aparecen aquí.', 'church')}
+        ${up.length ? `<ul class="list">${up.map(x => eventItem(x.e, true, x.k)).join('')}</ul>` : empty('Nada agendado. Las actividades con categoría Iglesia aparecen aquí.', 'church')}
         <h3 class="sub-h">Cada semana</h3>
         ${weekly.length ? `<ul class="list">${weekly.map(b => blockItem(b, true)).join('')}</ul>` : '<p class="hint">Crea bloques con categoría Iglesia en tu horario (cultos, ensayos, células).</p>'}
       </section>
@@ -2882,13 +2975,13 @@ const ACT = {
 };
 
 const CHG = {
-  evDone: el => { const e = findById(S.events, el.dataset.id); if (e) { e.done = el.checked; save(); renderAll(); } },
+  evDone: el => { const e = findById(S.events, el.dataset.id); if (e) { occW(e, el.dataset.date).done = el.checked; save(); renderAll(); } },
   subDone: el => {
-    const e = findById(S.events, el.dataset.id), s = e && findById(evSub(e), el.dataset.sub); if (!s) return;
-    s.done = el.checked;
-    const all = e.sub.every(x => x.done);
-    if (all && !e.done) { e.done = true; toast({ title: '¡Completa al 100%!', text: e.title, icon: 'confetti' }); }
-    else if (!all && e.done && !el.checked) e.done = false;
+    const e = findById(S.events, el.dataset.id), k = el.dataset.date, s = e && findById(evSub(e), el.dataset.sub); if (!s) return;
+    setSubDone(e, s, k, el.checked);
+    const all = e.sub.every(x => subDoneOn(e, x, k)), o = occW(e, k);
+    if (all && !o.done) { o.done = true; toast({ title: '¡Completa al 100%!', text: e.title, icon: 'confetti' }); }
+    else if (!all && o.done && !el.checked) o.done = false;
     save(); renderAll();
   },
   showBlocks: el => { S.showBlocks = el.checked; save(); renderAll(); },
@@ -4043,8 +4136,8 @@ function flash(id) {
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 const searchSources = () => [
-  { label: 'Actividades', icon: 'calendar-blank', items: () => S.events.map(e => ({ title: e.title, sub: `${e.date ? shortDate(e.date) : 'Algún día'}${e.time ? ' · ' + e.time : ''} · ${cat(e.cat).label}`, fields: [e.title, e.notes, ...evSub(e).map(s => s.text)],
-      open: () => { if (e.date) { pDate = fromYmd(e.date); S.plannerView = 'dia'; } go('planner'); eventModal(e); } })) },
+  { label: 'Actividades', icon: 'calendar-blank', items: () => S.events.map(e => ({ title: e.title, sub: `${isRep(e) ? repLabel(e) : e.date ? shortDate(e.date) : 'Algún día'}${e.time ? ' · ' + e.time : ''} · ${cat(e.cat).label}`, fields: [e.title, e.notes, ...evSub(e).map(s => s.text)],
+      open: () => { const k = isRep(e) ? nextOcc(e, ymd(new Date())) || e.date : e.date; if (k) { pDate = fromYmd(k); S.plannerView = 'dia'; } go('planner'); eventModal(e); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
