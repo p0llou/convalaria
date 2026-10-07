@@ -153,6 +153,21 @@
   .ev-m { font-size: 13px; color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ev.done .ev-t { text-decoration: line-through; opacity: .55; }
   .list.big .ev { padding: 14px 16px; }
+  .ev.has-sub { flex-wrap: wrap; }
+  .ev-sub { list-style: none; margin: 2px 0 0; padding: 0 0 0 32px; flex-basis: 100%; display: flex; flex-direction: column; gap: 6px; }
+  .ev-sub li { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .ev-sub li span { overflow-wrap: anywhere; min-width: 0; }
+  .ev-sub li.done span { text-decoration: line-through; opacity: .55; }
+  .ev-sub .chk, .sub-ed .chk { width: 18px; height: 18px; border-width: 1.5px; }
+  .ev-sub .chk:checked::after, .sub-ed .chk:checked::after { width: 4px; height: 8px; border-width: 0 2px 2px 0; }
+  .ev-sub .progress { height: 5px; margin-top: 2px; }
+  .ev-go { font-size: 18px; }
+  .sub-box { display: flex; flex-direction: column; gap: 6px; }
+  .sub-lbl { font-size: 14px; font-weight: 700; color: var(--muted); }
+  .sub-ed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .sub-ed li, .sub-add { display: flex; align-items: center; gap: 8px; }
+  .sub-ed .inp, .sub-add .inp { flex: 1; min-width: 0; width: auto; }
+  .chip-n { font-size: 11px; color: var(--muted); margin-left: 4px; white-space: nowrap; }
   .empty { text-align: center; padding: 22px 10px; color: var(--muted); font-weight: 600; }
   .empty > i { font-size: 42px; display: block; margin: 0 auto 6px; color: var(--accent); }
   .empty p { margin: 0; }
@@ -1080,17 +1095,22 @@ modal.addEventListener('click', e => { if (e.target === modal) modal.close(); })
 
 /* ---------- Actividades del planner ---------- */
 function eventTrigger(e) {
-  if (e.remind === '' || e.remind == null) return null;
+  if (e.remind === '' || e.remind == null || !e.date) return null;
   const d = fromYmd(e.date);
   d.setMinutes((toMin(e.time) ?? 540) - Number(e.remind));
   return d.getTime();
 }
+// Pasos (sublista) de una actividad: [{ id, text, done }]
+const evSub = e => Array.isArray(e.sub) ? e.sub : [];
+const subCount = e => { const s = evSub(e); return s.length ? `${s.filter(x => x.done).length}/${s.length}` : ''; };
+const subRow = s => `<li data-id="${s.id}"><input type="checkbox" class="chk" ${s.done ? 'checked' : ''} aria-label="Paso hecho">
+  <input class="inp" maxlength="120" value="${esc(s.text)}" aria-label="Paso"><button type="button" class="icon-btn" data-sub-del aria-label="Quitar paso">${ic('x')}</button></li>`;
 function eventModal(ev = null, preset = {}) {
-  const e = ev || { title: '', date: preset.date || ymd(new Date()), time: '', end: '', cat: preset.cat || 'personal', notes: '', remind: '' };
+  const e = ev || { title: '', date: preset.date ?? ymd(new Date()), time: '', end: '', cat: preset.cat || 'personal', notes: '', remind: '' };
   openModal(ev ? 'Editar actividad' : 'Nueva actividad', `
     <label class="fld"><span>Título</span><input name="title" required maxlength="120" value="${esc(e.title)}" placeholder="¿Qué vas a hacer?"></label>
     <div class="row2">
-      <label class="fld"><span>Fecha</span><input type="date" name="date" required value="${e.date}"></label>
+      <label class="fld"><span>Fecha</span><input type="date" name="date" ${e.lessonId ? 'required' : ''} value="${e.date}"></label>
       <label class="fld"><span>Categoría</span><select name="cat">${catOptions(e.cat)}</select></label>
     </div>
     <div class="row2">
@@ -1098,21 +1118,40 @@ function eventModal(ev = null, preset = {}) {
       <label class="fld"><span>Hasta</span><input type="time" name="end" value="${e.end}"></label>
     </div>
     <label class="fld"><span>Recordarme</span><select name="remind">${REMIND_OPTS.map(([v, l]) => `<option value="${v}" ${String(e.remind ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-    <p class="hint" style="margin:-6px 0 0">Si no tiene hora, te aviso a las 9:00.</p>
+    <p class="hint" style="margin:-6px 0 0">Si no tiene hora, te aviso a las 9:00. Sin fecha queda en «Algún día».</p>
+    <div class="sub-box"><span class="sub-lbl">Pasos</span>
+      <ul class="sub-ed" data-sub-list>${evSub(e).map(subRow).join('')}</ul>
+      <div class="sub-add"><input class="inp" data-sub-new maxlength="120" placeholder="Agregar paso…" aria-label="Nuevo paso"><button type="button" class="btn btn-sm" data-sub-add>${ic('plus')} Agregar</button></div>
+    </div>
     <label class="fld"><span>Notas</span><textarea name="notes" rows="3" placeholder="Lugar, qué llevar, detalles…">${esc(e.notes)}</textarea></label>`, {
-    onSave: fd => {
+    onSave: (fd, f) => {
       const d = Object.fromEntries(fd);
       if (d.time && d.end && toMin(d.end) <= toMin(d.time)) return 'La hora final debe ser después del inicio.';
-      const obj = { title: d.title.trim(), date: d.date, time: d.time, end: d.end, cat: d.cat, notes: d.notes.trim(), remind: d.remind };
+      const pend = $('[data-sub-new]', f).value.trim();
+      const sub = [...$$('[data-sub-list] li', f).map(li => ({ id: li.dataset.id, text: $('.inp', li).value.trim(), done: $('.chk', li).checked })),
+        ...(pend ? [{ id: uid(), text: pend, done: false }] : [])].filter(s => s.text);
+      const obj = { title: d.title.trim(), date: d.date, time: d.time, end: d.end, cat: d.cat, notes: d.notes.trim(), remind: d.remind, sub };
       const target = ev || { id: uid(), done: false };
       const changed = !ev || ev.date !== obj.date || ev.time !== obj.time || ev.remind !== obj.remind;
+      const hadPending = evSub(target).some(s => !s.done);
       Object.assign(target, obj);
+      // Todos los pasos listos = actividad hecha; un paso pendiente nuevo la reabre
+      if (sub.length && sub.every(s => s.done)) target.done = true;
+      else if (sub.length && !hadPending) target.done = false;
       if (changed) { const t = eventTrigger(target); target.fired = t != null && t < Date.now() - 60000; }
       if (!ev) S.events.push(target);
       const lesson = target.lessonId && findById(S.lessons, target.lessonId);
       if (lesson) lesson.date = obj.date;
       save(); renderAll();
-      toast({ title: ev ? 'Actividad actualizada' : 'Actividad agendada', text: `${obj.title} · ${shortDate(obj.date)}${obj.time ? ' ' + obj.time : ''}`, icon: 'calendar-check' });
+      toast({ title: ev ? 'Actividad actualizada' : obj.date ? 'Actividad agendada' : 'Guardada en Algún día', text: `${obj.title}${obj.date ? ' · ' + shortDate(obj.date) + (obj.time ? ' ' + obj.time : '') : ''}`, icon: 'calendar-check' });
+    },
+    onOpen: f => {
+      const list = $('[data-sub-list]', f), inp = $('[data-sub-new]', f);
+      const add = () => { const text = inp.value.trim(); if (!text) return; list.insertAdjacentHTML('beforeend', subRow({ id: uid(), text, done: false })); inp.value = ''; inp.focus(); };
+      $('[data-sub-add]', f).onclick = add;
+      inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } };
+      list.onclick = ev => { const b = ev.target.closest('[data-sub-del]'); if (b) b.closest('li').remove(); };
+      list.onkeydown = ev => { if (ev.key === 'Enter' && ev.target.matches('.inp')) { ev.preventDefault(); inp.focus(); } };
     },
     onDelete: ev ? () => {
       S.events = S.events.filter(x => x !== ev);
@@ -1123,11 +1162,15 @@ function eventModal(ev = null, preset = {}) {
   });
 }
 function eventItem(e, showDate = false) {
-  const when = [showDate ? shortDate(e.date) : '', e.time ? e.time + (e.end ? '–' + e.end : '') : 'Todo el día'].filter(Boolean).join(' · ');
-  const meta = when + (e.remind !== '' && e.remind != null ? ' · ' + ic('bell') : '') + (e.notes ? ' · ' + esc(e.notes) : '');
-  return `<li class="ev ${e.done ? 'done' : ''}" style="${catVars(e.cat)}">
+  const sub = evSub(e), n = sub.filter(s => s.done).length;
+  const when = [showDate && e.date ? shortDate(e.date) : '', e.time ? e.time + (e.end ? '–' + e.end : '') : e.date ? 'Todo el día' : ''].filter(Boolean).join(' · ');
+  const meta = [when, sub.length ? `${ic('list-checks')} ${n}/${sub.length}` : '', e.remind !== '' && e.remind != null && e.date ? ic('bell') : '', e.notes ? esc(e.notes) : ''].filter(Boolean).join(' · ');
+  return `<li class="ev ${e.done ? 'done' : ''} ${sub.length ? 'has-sub' : ''}" style="${catVars(e.cat)}">
     <input type="checkbox" class="chk" data-chg="evDone" data-id="${e.id}" ${e.done ? 'checked' : ''} aria-label="Marcar como hecho">
-    <button class="ev-main" data-act="evEdit" data-id="${e.id}"><span class="ev-t">${esc(e.title)}</span><span class="ev-m">${meta}</span></button>
+    <button class="ev-main" data-act="evEdit" data-id="${e.id}"><span class="ev-t">${esc(e.title)}</span>${meta ? `<span class="ev-m">${meta}</span>` : ''}</button>
+    ${e.date ? '' : `<button class="icon-btn ev-go" data-act="evToday" data-id="${e.id}" title="Pasar a hoy" aria-label="Pasar a hoy">${ic('calendar-plus')}</button>`}
+    ${sub.length ? `<ul class="ev-sub">${sub.map(s => `<li class="${s.done ? 'done' : ''}"><input type="checkbox" class="chk" data-chg="subDone" data-id="${e.id}" data-sub="${s.id}" ${s.done ? 'checked' : ''} aria-label="Paso hecho: ${esc(s.text)}"><span>${esc(s.text)}</span></li>`).join('')}
+      <li><div class="progress" style="flex:1"><span style="width:${n / sub.length * 100}%"></span></div></li></ul>` : ''}
   </li>`;
 }
 function blockItem(b, showDays = false) {
@@ -1503,7 +1546,16 @@ function renderPlanner(root) {
       </div>
     </div>
     <div class="legend">${Object.values(CATS).map(c => `<span><i style="background:${c.color}"></i>${c.label}</span>`).join('')}</div>
-    ${v === 'dia' ? dayView() : v === 'semana' ? weekView() : monthView()}`;
+    ${v === 'dia' ? dayView() : v === 'semana' ? weekView() : monthView()}
+    ${somedayHtml()}`;
+}
+function somedayHtml() {
+  const all = S.events.filter(e => !e.date), up = all.filter(e => !e.done), done = all.filter(e => e.done);
+  return `<section class="card" style="margin-top:16px">
+    <div class="card-h"><h2>Algún día</h2>${up.length ? `<span class="badge">${up.length}</span>` : ''}<span class="grow"></span><button class="btn btn-sm btn-primary" data-act="evNew" data-date="">${ic('plus')} Añadir</button></div>
+    ${up.length ? `<ul class="list">${up.map(e => eventItem(e)).join('')}</ul>` : empty('Sin pendientes sin fecha', 'tray')}
+    ${done.length ? `<details class="past"><summary>Hechas (${done.length})</summary><ul class="list">${done.map(e => eventItem(e)).join('')}</ul><button class="btn btn-sm" data-act="somedayClear">Limpiar hechas</button></details>` : ''}
+  </section>`;
 }
 function dayView() {
   const items = dayAgenda(pDate);
@@ -1513,7 +1565,7 @@ function dayView() {
 function chip(it) {
   const x = it.x;
   if (it.k === 'bd') return `<button class="chip chip-bd" data-act="bdEdit" data-id="${x.id}">${ic('cake')} ${esc(x.name)}</button>`;
-  if (it.k === 'e') return `<button class="chip ${x.done ? 'done' : ''}" style="${catVars(x.cat)}" data-act="evEdit" data-id="${x.id}">${x.time ? `<small>${x.time}</small>` : ''}${esc(x.title)}</button>`;
+  if (it.k === 'e') return `<button class="chip ${x.done ? 'done' : ''}" style="${catVars(x.cat)}" data-act="evEdit" data-id="${x.id}">${x.time ? `<small>${x.time}</small>` : ''}${esc(x.title)}${subCount(x) ? `<span class="chip-n">${subCount(x)}</span>` : ''}</button>`;
   return `<button class="chip chip-block" style="${catVars(x.cat)}" data-act="blockEdit" data-id="${x.id}"><small>${x.start}–${x.end}</small>${esc(x.title)}</button>`;
 }
 function weekView() {
@@ -2677,6 +2729,17 @@ const ACT = {
     addReminder(text, localIso(new Date(Date.now() + Number(el.dataset.min) * 60000)));
   },
   remDel: el => { S.reminders = S.reminders.filter(r => r.id !== el.dataset.id); save(); renderReminderLists(); },
+  evToday: el => {
+    const e = findById(S.events, el.dataset.id); if (!e) return;
+    e.date = ymd(new Date());
+    const t = eventTrigger(e); e.fired = t != null && t < Date.now() - 60000;
+    save(); renderAll();
+    toast({ title: 'Pasada a hoy', text: e.title, icon: 'calendar-plus' });
+  },
+  somedayClear: () => {
+    if (!confirm('¿Borrar las hechas sin fecha?')) return;
+    S.events = S.events.filter(e => e.date || !e.done); save(); renderAll();
+  },
   remClear: () => { S.reminders = S.reminders.filter(r => !r.fired); save(); renderReminderLists(); },
 
   prayerDel: el => { S.prayers = S.prayers.filter(p => p.id !== el.dataset.id); save(); renderAll(); },
@@ -2776,6 +2839,14 @@ const ACT = {
 
 const CHG = {
   evDone: el => { const e = findById(S.events, el.dataset.id); if (e) { e.done = el.checked; save(); renderAll(); } },
+  subDone: el => {
+    const e = findById(S.events, el.dataset.id), s = e && findById(evSub(e), el.dataset.sub); if (!s) return;
+    s.done = el.checked;
+    const all = e.sub.every(x => x.done);
+    if (all && !e.done) { e.done = true; toast({ title: '¡Completa al 100%!', text: e.title, icon: 'confetti' }); }
+    else if (!all && e.done && !el.checked) e.done = false;
+    save(); renderAll();
+  },
   showBlocks: el => { S.showBlocks = el.checked; save(); renderAll(); },
   prayerDone: el => { const p = findById(S.prayers, el.dataset.id); if (p) { p.answered = el.checked ? ymd(new Date()) : null; save(); renderAll(); } },
   ctodoDone: el => { const x = findById(S.churchTodos, el.dataset.id); if (x) { x.done = el.checked; save(); renderAll(); } },
@@ -3928,8 +3999,8 @@ function flash(id) {
   el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 const searchSources = () => [
-  { label: 'Actividades', icon: 'calendar-blank', items: () => S.events.map(e => ({ title: e.title, sub: `${shortDate(e.date)}${e.time ? ' · ' + e.time : ''} · ${cat(e.cat).label}`, fields: [e.title, e.notes],
-      open: () => { pDate = fromYmd(e.date); S.plannerView = 'dia'; go('planner'); eventModal(e); } })) },
+  { label: 'Actividades', icon: 'calendar-blank', items: () => S.events.map(e => ({ title: e.title, sub: `${e.date ? shortDate(e.date) : 'Algún día'}${e.time ? ' · ' + e.time : ''} · ${cat(e.cat).label}`, fields: [e.title, e.notes, ...evSub(e).map(s => s.text)],
+      open: () => { if (e.date) { pDate = fromYmd(e.date); S.plannerView = 'dia'; } go('planner'); eventModal(e); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
