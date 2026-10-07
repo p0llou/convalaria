@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Convalaria</title>
 <meta name="description" content="Convalaria: planner, horario, iglesia, estudio bíblico y más, con aroma a lirio de los valles.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -55,14 +55,14 @@
   [data-theme="nube"] { --bg:#f6faff; --ink:#35404f; --muted:#7a8799; --line:#d6e6f7; --accent:#7fb3e8; --accent-strong:#4a84c4; --accent-soft:#e1eefb; --accent-softer:#f5f9ff; --shadow:0 10px 30px -14px rgba(74,132,196,.35); }
 
   *, *::before, *::after { box-sizing: border-box; }
-  html { font-family: var(--font-body); color: var(--ink); }
+  html { font-family: var(--font-body); color: var(--ink); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .display, h1, h2, h3, .brand, .hero-hi, .hero-clock, .ring-t, .tmr-t, .sw-t, .tile strong, .acct-amt, .mini-focus .t, .mm-node.root, .slide-t, .tithe strong {
     font-family: var(--font-display); font-weight: 800; font-variation-settings: 'SOFT' 100, 'WONK' 1; letter-spacing: -.005em; }
   .ph, .ph-duotone, .ph-fill { line-height: 1; vertical-align: -.14em; }
   .btn .ph, .btn .ph-duotone, .btn .ph-fill { font-size: 1.15em; margin-right: 2px; }
   .icon-btn .ph { font-size: 20px; vertical-align: 0; }
   body {
-    margin: 0; min-height: 100vh; font-weight: 400; line-height: 1.5;
+    margin: 0; min-height: 100vh; min-height: 100dvh; font-weight: 400; line-height: 1.5;
     background-color: var(--bg);
     background-image: radial-gradient(var(--line) 1.1px, transparent 1.5px);
     background-size: 22px 22px;
@@ -76,9 +76,9 @@
   .bg-photo::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: var(--veil); }
 
   /* Layout */
-  .app { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; }
+  .app { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; }
   .nav {
-    position: sticky; top: 0; height: 100vh; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px;
+    position: sticky; top: 0; height: 100vh; height: 100dvh; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px;
     background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
     border-right: 1px solid var(--line); z-index: 20;
   }
@@ -88,6 +88,7 @@
   .nav-btn.on { background: var(--accent-soft); color: var(--accent-strong); }
   .nav-btn:focus-visible { outline: 2.5px solid var(--accent-strong); }
   .nav-btn .ic { font-size: 20px; }
+  .nav-more { display: none; }
   .main { padding: 28px 32px 60px; max-width: 1240px; width: 100%; margin: 0 auto; min-width: 0; }
   .view[hidden] { display: none; }
 
@@ -351,9 +352,15 @@
   .empty-img { width: 58px; height: 58px; display: block; margin: 0 auto 6px; opacity: .9; }
 
   /* Modal */
-  dialog.modal { border: 0; padding: 0; border-radius: var(--radius); width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); color: var(--ink); background: var(--surface-solid); box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
+  dialog.modal { border: 0; padding: 0; border-radius: var(--radius); width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); color: var(--ink); background: var(--surface-solid); box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
   dialog.modal::backdrop { background: rgba(75,57,66,.35); backdrop-filter: blur(3px); }
-  .modal form { display: flex; flex-direction: column; max-height: calc(100vh - 40px); }
+  .modal form { display: flex; flex-direction: column; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); }
+  /* Hoja "Más" (celular): todas las secciones */
+  dialog.sheet[open] { display: flex; flex-direction: column; }
+  .more-b { padding: 0 16px calc(18px + env(safe-area-inset-bottom)); overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+  .more-b .nav-g { grid-column: 1 / -1; padding: 12px 4px 4px; }
+  .more-b .nav-btn { flex: none; flex-direction: row; gap: 10px; padding: 11px 12px; font-size: 15px; text-align: left; border-radius: var(--r-sm); }
+  .more-b .kbd { display: none; }
   .modal-h { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 10px; }
   .modal-h h3 { font-size: 20px; }
   .modal-b { padding: 4px 22px 10px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
@@ -451,7 +458,8 @@
     background-color: transparent; background-image: linear-gradient(transparent 29px, var(--line) 29px); background-size: 100% 30px; background-position: 0 8px; background-attachment: local; }
   .gbox textarea:focus { background-color: var(--paper); }
 
-  dialog.present { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; border: 0; padding: 0; color: var(--ink);
+  dialog.present { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); color: var(--ink);
     background: linear-gradient(160deg, var(--accent-softer), var(--surface-solid) 50%, var(--accent-soft)); font-family: var(--font-body); }
   .present-in { height: 100%; display: flex; flex-direction: column; padding: 20px clamp(20px, 5vw, 72px); }
   .present-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -724,7 +732,6 @@
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface-solid) 94%, transparent); z-index: 50; }
     .brand { display: none; }
     .nav-btn { flex: 1; flex-direction: column; gap: 2px; padding: 6px 2px; font-size: 10.5px; text-align: center; border-radius: 12px; }
-    .main { padding: 16px 16px 96px; }
     .hero { padding: 26px 20px; flex-direction: column; align-items: flex-start; min-height: 180px; }
     .hero-deco { width: 130px; bottom: -10px; right: 6px; }
     .page-h h1 { font-size: 26px; }
@@ -740,13 +747,21 @@
     .stat { grid-template-columns: 80px 1fr 50px; }
   }
   @media (max-width: 760px) {
-    .nav { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; scrollbar-width: none; }
-    .nav::-webkit-scrollbar { display: none; }
-    .nav-g, .nav-foot, .nav-search .kbd { display: none; }
-    .nav-btn { flex: 0 0 70px; }
+    /* Barra inferior: 4 secciones fijas + "Más" */
+    .nav > .nav-btn:not(.nav-fix):not(.nav-more), .nav > .nav-g, .nav-foot { display: none; }
+    .nav { padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); }
+    .nav > .nav-btn { font-size: 11px; padding: 7px 2px; }
+    .nav > .nav-btn .ic { font-size: 22px; }
+    .nav-more { display: flex; }
+    .main { padding: 16px max(16px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    /* Ventanas como hoja que sube desde abajo, sobre el teclado */
+    #modal, dialog.sheet { width: 100%; max-width: 100%; margin: auto 0 var(--kb, 0px); border-radius: var(--radius) var(--radius) 0 0;
+      max-height: calc(var(--vvh, 100dvh) - 12px); }
+    #modal form { max-height: calc(var(--vvh, 100dvh) - 12px); }
+    #modal .modal-f { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
     .guide, .guide-top, .pg-grid { grid-template-columns: 1fr; }
     .map { height: 420px; }
-    .mm-wrap { height: calc(100vh - 330px); min-height: 360px; }
+    .mm-wrap { height: calc(100vh - 330px); height: calc(100dvh - 330px); min-height: 360px; }
     .hbar { grid-template-columns: 90px 1fr auto; gap: 8px; }
     .tithe { grid-template-columns: 1fr; }
     .row3 { grid-template-columns: 1fr 1fr; }
@@ -758,6 +773,10 @@
   }
   @media print {
     .pg-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+  /* Sin zoom automático del iPhone al escribir: campos de 16px mínimo en pantallas táctiles */
+  @media (max-width: 760px), (pointer: coarse) {
+    input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: max(16px, 1em); }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -772,13 +791,13 @@
     <div class="brand"><img src="icons/logo.svg" alt="" width="40" height="40"> Convalaria<i class="ph-duotone ph-cloud sync-ic" data-sync-ic hidden aria-hidden="true"></i></div>
     <button class="nav-btn nav-search" data-act="search" aria-label="Buscar (Ctrl+K)"><span class="ic"><i class="ph-duotone ph-magnifying-glass" aria-hidden="true"></i></span><span>Buscar</span><kbd class="kbd">Ctrl K</kbd></button>
     <div class="nav-g">Organizar</div>
-    <button class="nav-btn" data-act="go" data-view="inicio"><span class="ic"><i class="ph-duotone ph-house" aria-hidden="true"></i></span><span>Inicio</span></button>
-    <button class="nav-btn" data-act="go" data-view="planner"><span class="ic"><i class="ph-duotone ph-calendar-blank" aria-hidden="true"></i></span><span>Planner</span></button>
+    <button class="nav-btn nav-fix" data-act="go" data-view="inicio"><span class="ic"><i class="ph-duotone ph-house" aria-hidden="true"></i></span><span>Inicio</span></button>
+    <button class="nav-btn nav-fix" data-act="go" data-view="planner"><span class="ic"><i class="ph-duotone ph-calendar-blank" aria-hidden="true"></i></span><span>Planner</span></button>
     <button class="nav-btn" data-act="go" data-view="horario"><span class="ic"><i class="ph-duotone ph-clock" aria-hidden="true"></i></span><span>Horario</span></button>
     <button class="nav-btn" data-act="go" data-view="timers"><span class="ic"><i class="ph-duotone ph-timer" aria-hidden="true"></i></span><span>Timers</span></button>
     <button class="nav-btn" data-act="go" data-view="habitos"><span class="ic"><i class="ph-duotone ph-plant" aria-hidden="true"></i></span><span>Hábitos</span></button>
     <div class="nav-g">Iglesia</div>
-    <button class="nav-btn" data-act="go" data-view="iglesia"><span class="ic"><i class="ph-duotone ph-church" aria-hidden="true"></i></span><span>Iglesia</span></button>
+    <button class="nav-btn nav-fix" data-act="go" data-view="iglesia"><span class="ic"><i class="ph-duotone ph-church" aria-hidden="true"></i></span><span>Iglesia</span></button>
     <button class="nav-btn" data-act="go" data-view="estudio"><span class="ic"><i class="ph-duotone ph-book-open-text" aria-hidden="true"></i></span><span>Estudio bíblico</span></button>
     <button class="nav-btn" data-act="go" data-view="premios"><span class="ic"><i class="ph-duotone ph-trophy" aria-hidden="true"></i></span><span>Plan de premios</span></button>
     <button class="nav-btn" data-act="go" data-view="versiculos"><span class="ic"><i class="ph-duotone ph-cards" aria-hidden="true"></i></span><span>Versículos</span></button>
@@ -786,10 +805,11 @@
     <div class="nav-g">Herramientas</div>
     <button class="nav-btn" data-act="go" data-view="ideas"><span class="ic"><i class="ph-duotone ph-brain" aria-hidden="true"></i></span><span>Mapa mental</span></button>
     <button class="nav-btn" data-act="go" data-view="lugares"><span class="ic"><i class="ph-duotone ph-map-trifold" aria-hidden="true"></i></span><span>Lugares</span></button>
-    <button class="nav-btn" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
+    <button class="nav-btn nav-fix" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
     <div class="nav-g">Tú</div>
     <button class="nav-btn" data-act="go" data-view="decorar"><span class="ic"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span><span>Decorar</span></button>
     <button class="nav-btn" data-act="toggleDark"><span class="ic"><i class="ph-duotone ph-moon-stars" aria-hidden="true"></i></span><span>Modo noche</span></button>
+    <button class="nav-btn nav-more" data-act="moreOpen" aria-haspopup="dialog"><span class="ic"><i class="ph-duotone ph-dots-three-circle" aria-hidden="true"></i></span><span>Más</span></button>
     <div class="nav-foot"><img src="icons/logo.svg" alt="" width="46" height="46"><p>“Yo soy la rosa de Sarón, y el lirio de los valles.”<b>Cantares 2:1</b></p></div>
   </nav>
 
@@ -815,6 +835,7 @@
 <dialog id="modal" class="modal"><form id="modalForm" novalidate></form></dialog>
 <dialog id="present" class="present" aria-label="Modo clase"></dialog>
 <dialog id="practice" class="present" aria-label="Práctica de versículos"></dialog>
+<dialog id="more" class="modal sheet more-dlg" aria-label="Todas las secciones"></dialog>
 <dialog id="search" class="modal search-dlg" aria-label="Buscar">
   <div class="sr-box"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input id="srInput" type="search" data-inp="search" placeholder="Buscar en Convalaria…" autocomplete="off" spellcheck="false" aria-label="Buscar" aria-controls="srResults"><kbd class="kbd">Esc</kbd></div>
   <div id="srResults" class="sr-results" role="listbox"></div>
@@ -2686,11 +2707,11 @@ function isDarkNow() {
 }
 function applyMode() {
   const dark = isDarkNow(), html = document.documentElement, mode = dark ? 'dark' : 'light';
-  const b = $('[data-act="toggleDark"]');
-  if (b && b.dataset.mode !== mode) {
+  $$('[data-act="toggleDark"]').forEach(b => {
+    if (b.dataset.mode === mode) return;
     b.dataset.mode = mode;
     b.innerHTML = `<span class="ic">${ic(dark ? 'sun' : 'moon-stars', 'duotone')}</span><span>${dark ? 'Modo día' : 'Modo noche'}</span>`;
-  }
+  });
   if (html.dataset.mode === mode) return;
   html.dataset.mode = mode;
   $('meta[name="theme-color"]')?.setAttribute('content', dark ? '#1f141c' : '#fbd0e1');
@@ -2712,6 +2733,7 @@ function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
   current = v; S.lastView = v; save();
   $$('.nav-btn').forEach(b => { const on = b.dataset.view === v; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+  $('.nav-more').classList.toggle('on', !$(`.nav-fix[data-view="${v}"]`));
   $$('.view').forEach(s => s.hidden = s.id !== 'view-' + v);
   renderAll();
   window.scrollTo(0, 0);
@@ -4171,6 +4193,23 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   FORMS[f.dataset.form] && FORMS[f.dataset.form](f, e.submitter);
 });
+
+/* ---------- Celular: hoja "Más" y alto visible ---------- */
+const moreDlg = $('#more');
+moreDlg.innerHTML = `<header class="modal-h"><h3>Secciones</h3><button type="button" class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></header>
+  <div class="more-b">${[...$('.nav').children].filter(el => el.matches('.nav-g, .nav-btn:not(.nav-more)')).map(el => el.outerHTML).join('')}</div>`;
+// Cierra al elegir: el click sigue hasta document y ejecuta su data-act
+moreDlg.addEventListener('click', e => { if (e.target === moreDlg || e.target.closest('[data-close], [data-act]')) moreDlg.close(); });
+ACT.moreOpen = () => moreDlg.showModal();
+// Alto visible y teclado (iPhone no achica la página al abrir el teclado)
+if (window.visualViewport) {
+  const vv = visualViewport, root = document.documentElement;
+  const fit = () => {
+    root.style.setProperty('--vvh', vv.height + 'px');
+    root.style.setProperty('--kb', Math.max(0, innerHeight - vv.height - vv.offsetTop) + 'px');
+  };
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit();
+}
 
 /* ---------- PWA ---------- */
 let installPrompt = null;
