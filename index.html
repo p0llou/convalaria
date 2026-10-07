@@ -232,9 +232,11 @@
 
   /* Tablero */
   .board-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 34px; align-items: center; }
-  .board { position: relative; height: 460px; border-radius: 18px; overflow: hidden;
+  /* El tablero es un lienzo fijo de 1000×460 escalado al ancho disponible: se ve igual en computador y celular */
+  .board { position: relative; aspect-ratio: 1000 / 460; border-radius: 18px; overflow: hidden;
     background-color: var(--accent-softer); background-image: radial-gradient(var(--line) 1.2px, transparent 1.6px); background-size: 18px 18px; }
   .board-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; text-align: center; padding: 20px; }
+  .board-canvas { position: absolute; left: 0; top: 0; width: 1000px; height: 460px; transform-origin: 0 0; transform: scale(var(--bs, 1)); }
   .bi { position: absolute; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; transform: rotate(var(--rot, 0deg)); }
   .bi.dragging { cursor: grabbing; }
   .bi.sel { outline: 2.5px dashed var(--accent-strong); outline-offset: 5px; }
@@ -742,7 +744,6 @@
     .mcell { min-height: 58px; padding: 4px; }
     .mchip { font-size: 0; height: 6px; padding: 0; border: 0; background: var(--c); border-radius: 3px; }
     .more { font-size: 10px; }
-    .board { height: 380px; }
     #toasts { right: 16px; left: 16px; width: auto; }
     .stat { grid-template-columns: 80px 1fr 50px; }
   }
@@ -1408,9 +1409,14 @@ function boardHtml() {
     <div class="board-tools" data-boardtools></div>
     <div class="board" data-board></div>`;
 }
+const BOARD_W = 1000;
+const boardRO = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty('--bs', e.contentRect.width / BOARD_W)));
 function mountBoard(board) {
   if (!board) return;
-  board.innerHTML = S.board.length ? '' : '<div class="board-empty">Decora este espacio con tus fotos, stickers y notas</div>';
+  board.innerHTML = S.board.length ? '<div class="board-canvas"></div>' : '<div class="board-empty">Decora este espacio con tus fotos, stickers y notas</div>';
+  board.style.setProperty('--bs', board.clientWidth / BOARD_W);
+  boardRO.disconnect(); boardRO.observe(board);
+  const canvas = $('.board-canvas', board);
   S.board.forEach((it, i) => {
     const n = document.createElement('div');
     n.className = `bi bi-${it.type}${it.id === boardSel ? ' sel' : ''}`;
@@ -1428,7 +1434,7 @@ function mountBoard(board) {
     } else {
       n.textContent = it.text; n.style.setProperty('--note', it.color || NOTE_COLORS[0]);
     }
-    board.appendChild(n);
+    canvas.appendChild(n);
   });
   board.onpointerdown = boardPointerDown;
   renderBoardTools(board);
@@ -1453,7 +1459,7 @@ function boardPointerDown(e) {
   const it = S.board.find(x => x.id === n.dataset.id);
   if (!it) return;
   e.preventDefault();
-  const rect = board.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, ox = it.x, oy = it.y;
+  const rect = n.parentElement.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, ox = it.x, oy = it.y;
   let moved = false;
   try { n.setPointerCapture(e.pointerId); } catch {}
   const move = ev => {
