@@ -613,6 +613,8 @@
   .mk:hover { border-color: var(--accent); }
   .mk.on { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
   .mk:disabled { opacity: .35; cursor: not-allowed; }
+  .mk.other { color: var(--muted); border-style: dashed; font-size: 11px; font-weight: 800; line-height: 1.1; }
+  .aw-task .inp { flex: 1 1 220px; }
   .col-btn { font: inherit; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; padding: 4px 6px; border-radius: 10px; }
   .col-btn i { font-size: 22px; color: var(--accent-strong); }
   .col-btn:hover { background: var(--accent-softer); }
@@ -937,7 +939,7 @@ const defaults = () => ({
   lessons: [], mindmaps: [], places: [], birthdays: [], money: [],
   moneyCfg: { currency: 'CLP', budget: 0, opening: null },
   savings: [], savingsMoves: [], owed: [],
-  awards: { students: [], days: {} },
+  awards: { students: [], days: {}, tasks: {} },
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
@@ -952,6 +954,7 @@ function normalize(raw) {
   s.awards = Object.assign(defaults().awards, raw?.awards);
   if (!Array.isArray(s.awards.students)) s.awards.students = [];
   if (!s.awards.days || typeof s.awards.days !== 'object') s.awards.days = {};
+  if (!s.awards.tasks || typeof s.awards.tasks !== 'object' || Array.isArray(s.awards.tasks)) s.awards.tasks = {};
   delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
@@ -3146,15 +3149,21 @@ Object.assign(FORMS, {
 
 /* ---------- Plan de premios ---------- */
 const AW_CRIT = [['a', 'Asistencia', 'user-check'], ['p', 'Puntualidad', 'clock'], ['v', 'Versículo', 'book-bookmark'], ['b', 'Biblia', 'book-open'], ['c', 'Participación', 'chat-circle-dots']];
-let awTab = null, awDate = null, awYear = new Date().getFullYear();
+// Tarea del mes: S.awards.tasks["YYYY-MM"] = texto; la entrega se marca en el domingo como m.t = "YYYY-MM" (mes al que corresponde)
+const AW_TASK_PTS = 5;
+let awTab = null, awDate = null, awTaskMonth = null, awYear = new Date().getFullYear();
 const lastSunday = () => ymd(addDays(todayStart(), -new Date().getDay()));
-const awPts = m => m ? AW_CRIT.reduce((n, [k]) => n + (m[k] ? 1 : 0), 0) : 0;
+const awPts = m => m ? AW_CRIT.reduce((n, [k]) => n + (m[k] ? 1 : 0), 0) + (m.t ? AW_TASK_PTS : 0) : 0;
+const awYm = () => awTaskMonth || awDate.slice(0, 7);
+const awYmLabel = ym => `${MESES[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+// Domingo en que la alumna entregó la tarea de ese mes (o null)
+const awTaskDay = (sid, ym) => Object.keys(S.awards.days).find(d => S.awards.days[d][sid]?.t === ym) || null;
 const awStudents = (all = false) => S.awards.students.filter(x => all || x.active !== false).sort((a, b) => a.name.localeCompare(b.name, 'es'));
 const awDays = () => Object.keys(S.awards.days).filter(d => Object.values(S.awards.days[d]).some(m => m.a)).sort();
 function awStats(year) {
   const days = awDays().filter(d => d.startsWith(year + '-'));
   const months = [...new Set(days.map(d => Number(d.slice(5, 7)) - 1))].sort((a, b) => a - b);
-  const per = new Map(S.awards.students.map(st => [st.id, { s: st, total: 0, months: {}, crit: { a: 0, p: 0, v: 0, b: 0, c: 0 }, mc: {} }]));
+  const per = new Map(S.awards.students.map(st => [st.id, { s: st, total: 0, months: {}, crit: { a: 0, p: 0, v: 0, b: 0, c: 0, t: 0 }, mc: {} }]));
   days.forEach(d => {
     const m = Number(d.slice(5, 7)) - 1;
     for (const [sid, mk] of Object.entries(S.awards.days[d])) {
@@ -3162,11 +3171,14 @@ function awStats(year) {
       if (!r) continue;
       const pts = awPts(mk);
       r.total += pts; r.months[m] = (r.months[m] || 0) + pts;
-      r.mc[m] = r.mc[m] || { a: 0, p: 0, v: 0, b: 0, c: 0 };
+      r.mc[m] = r.mc[m] || { a: 0, p: 0, v: 0, b: 0, c: 0, t: 0 };
       AW_CRIT.forEach(([k]) => { if (mk[k]) { r.crit[k]++; r.mc[m][k]++; } });
+      if (mk.t) { r.crit.t++; r.mc[m].t++; }
     }
   });
-  return { days, months, rows: [...per.values()] };
+  // Meses del año con tarea (escrita o entregada)
+  const taskMonths = [...new Set([...Object.keys(S.awards.tasks), ...days.flatMap(d => Object.values(S.awards.days[d]).map(m => m.t).filter(Boolean))])].filter(ym => ym.startsWith(year + '-')).sort();
+  return { days, months, rows: [...per.values()], taskMonths };
 }
 const awBd = st => st.bdId ? findById(S.birthdays, st.bdId) : null;
 function awBdBadge(st) {
@@ -3223,11 +3235,28 @@ function awVerseHtml() {
     ${l ? `<button class="btn btn-sm" data-act="awLesson" data-id="${l.id}">${ic('book-open-text')} Ver clase</button>` : `<button class="btn btn-sm" data-act="awLessonNew">${ic('plus')} Crear clase</button>`}
     ${l?.golden ? `<p class="aw-verse-text">“${esc(l.goldenText || l.golden)}”${l.goldenText ? ` <small>${esc(l.golden)}</small>` : ''}</p>` : `<span class="hint" style="margin:0;flex-basis:100%">${l ? 'La clase de este día aún no tiene texto áureo.' : 'No hay clase de estudio bíblico en esta fecha.'}</span>`}</div>`;
 }
-function awCleanDay() {
-  const day = S.awards.days[awDate];
+function awCleanDay(date = awDate) {
+  const day = S.awards.days[date];
   if (!day) return;
   for (const [sid, m] of Object.entries(day)) if (!awPts(m)) delete day[sid];
-  if (!Object.keys(day).length) delete S.awards.days[awDate];
+  if (!Object.keys(day).length) delete S.awards.days[date];
+}
+function awTaskHtml(studs, day) {
+  const ym = awYm(), base = awDate.slice(0, 7), [y, mo] = base.split('-').map(Number);
+  const opts = [...new Set([...Array.from({ length: 12 }, (_, i) => ymd(new Date(y, mo - 1 - i, 1)).slice(0, 7)), ym])].sort().reverse();
+  const done = studs.filter(x => awTaskDay(x.id, ym)).length;
+  return `<div class="aw-verse aw-task">${ic('notebook', 'duotone')}
+    <span class="toggle">Tarea del mes · ${AW_TASK_PTS} pts</span>
+    <select class="inp" style="width:auto;padding:6px 10px;flex:0 0 auto" data-chg="awTaskMonth" aria-label="Mes de la tarea">${opts.map(o => `<option value="${o}" ${o === ym ? 'selected' : ''}>${cap(awYmLabel(o))}</option>`).join('')}</select>
+    <span class="badge">${done}/${studs.length} entregadas</span>
+    <input class="inp" data-inp="awTaskText" maxlength="300" value="${esc(S.awards.tasks[ym] || '')}" placeholder="Escribe la tarea de ${awYmLabel(ym)}…" aria-label="Tarea de ${awYmLabel(ym)}"></div>`;
+}
+function awTaskCell(x, m) {
+  const ym = awYm(), lbl = `Tarea de ${awYmLabel(ym)}: ${esc(x.name)}`;
+  if (m.t && m.t !== ym) return `<button class="mk other" data-act="awTask" data-s="${x.id}" title="Este domingo entregó la tarea de ${awYmLabel(m.t)}" aria-label="${lbl}">${MESES[Number(m.t.slice(5, 7)) - 1].slice(0, 3)}</button>`;
+  const other = !m.t && awTaskDay(x.id, ym);
+  if (other) { const od = fromYmd(other); return `<button class="mk other" data-act="awTask" data-s="${x.id}" ${m.a ? '' : 'disabled'} title="La entregó el ${od.getDate()} de ${MESES[od.getMonth()]}. Toca para pasarla a este domingo" aria-label="${lbl}">${od.getDate()} ${MESES[od.getMonth()].slice(0, 3)}</button>`; }
+  return `<button class="mk ${m.t ? 'on' : ''}" data-act="awTask" data-s="${x.id}" aria-pressed="${!!m.t}" aria-label="${lbl}" ${m.a ? '' : 'disabled'}>${ic('check')}</button>`;
 }
 
 function renderPremios(root) {
@@ -3235,7 +3264,7 @@ function renderPremios(root) {
   if (!awDate) awDate = lastSunday();
   const tabs = [['registro', 'Registro', 'clipboard-text'], ['panel', 'Puntajes', 'chart-bar'], ['alumnas', 'Alumnas', 'users-three']];
   root.innerHTML = `
-    <div class="page-h"><div><h1>Plan de premios</h1><p class="sub">Asistencia, puntualidad, versículo, Biblia y participación, domingo a domingo.</p></div>
+    <div class="page-h"><div><h1>Plan de premios</h1><p class="sub">Asistencia, puntualidad, versículo, Biblia y participación, domingo a domingo, más la tarea del mes.</p></div>
       <div class="seg">${tabs.map(([k, l, i]) => `<button class="${awTab === k ? 'on' : ''}" data-act="awTab" data-t="${k}" aria-pressed="${awTab === k}">${ic(i)} ${l}</button>`).join('')}</div></div>
     ${awTab === 'registro' ? awRegistroHtml() : awTab === 'panel' ? awPanelHtml() : awAlumnasHtml()}`;
 }
@@ -3256,22 +3285,23 @@ function awRegistroHtml() {
       <span class="badge">${present}/${studs.length} presentes · ${dayPts} pts</span>
     </div>
     ${awVerseHtml()}
+    ${awTaskHtml(studs, day)}
     ${d.getDay() !== 0 ? `<p class="hint">${ic('info')} Esta fecha no es domingo. Puedes registrarla igual si hubo una clase especial.</p>` : ''}
-    <p class="hint">Toca cada casilla para dar el punto, o el encabezado para marcar toda la columna. Sin asistencia no se marcan los demás puntos.</p>
+    <p class="hint">Toca cada casilla para dar el punto, o el encabezado para marcar toda la columna. Sin asistencia no se marcan los demás puntos. La tarea se anota en el domingo que la trajo, para el mes elegido arriba.</p>
     <div class="aw-table-wrap"><table class="aw-table">
-      <thead><tr><th>Alumna</th>${AW_CRIT.map(([k, l, i]) => `<th><button class="col-btn" data-act="awCol" data-k="${k}" title="Marcar ${l.toLowerCase()} a todas" aria-label="Marcar ${l.toLowerCase()} a todas">${ic(i, 'duotone')}<span>${l}</span></button></th>`).join('')}<th>Pts</th></tr></thead>
+      <thead><tr><th>Alumna</th>${AW_CRIT.map(([k, l, i]) => `<th><button class="col-btn" data-act="awCol" data-k="${k}" title="Marcar ${l.toLowerCase()} a todas" aria-label="Marcar ${l.toLowerCase()} a todas">${ic(i, 'duotone')}<span>${l}</span></button></th>`).join('')}<th><button class="col-btn" data-act="awTaskCol" title="Marcar la tarea a todas las presentes" aria-label="Marcar la tarea a todas las presentes">${ic('notebook', 'duotone')}<span>Tarea</span></button></th><th>Pts</th></tr></thead>
       <tbody>${studs.map(x => {
         const m = day[x.id] || {};
-        return `<tr class="${m.a ? '' : 'absent'}"><td>${esc(x.name)}${awBdBadge(x)}</td>${AW_CRIT.map(([k, l]) => `<td><button class="mk ${m[k] ? 'on' : ''}" data-act="awMark" data-s="${x.id}" data-k="${k}" aria-pressed="${!!m[k]}" aria-label="${l}: ${esc(x.name)}" ${k !== 'a' && !m.a ? 'disabled' : ''}>${ic('check')}</button></td>`).join('')}<td>${awPts(m)}</td></tr>`;
+        return `<tr class="${m.a ? '' : 'absent'}"><td>${esc(x.name)}${awBdBadge(x)}</td>${AW_CRIT.map(([k, l]) => `<td><button class="mk ${m[k] ? 'on' : ''}" data-act="awMark" data-s="${x.id}" data-k="${k}" aria-pressed="${!!m[k]}" aria-label="${l}: ${esc(x.name)}" ${k !== 'a' && !m.a ? 'disabled' : ''}>${ic('check')}</button></td>`).join('')}<td>${awTaskCell(x, m)}</td><td>${awPts(m)}</td></tr>`;
       }).join('')}</tbody>
-      <tfoot><tr class="aw-foot"><td>Total del día</td>${AW_CRIT.map(([k]) => `<td>${studs.filter(x => day[x.id]?.[k]).length}</td>`).join('')}<td>${dayPts}</td></tr></tfoot>
+      <tfoot><tr class="aw-foot"><td>Total del día</td>${AW_CRIT.map(([k]) => `<td>${studs.filter(x => day[x.id]?.[k]).length}</td>`).join('')}<td>${studs.filter(x => day[x.id]?.t).length}</td><td>${dayPts}</td></tr></tfoot>
     </table></div>
     ${S.awards.days[awDate] ? `<div class="btns" style="margin-top:12px"><button class="btn btn-sm btn-danger" data-act="awClearDay">${ic('trash')} Borrar registro de este día</button></div>` : ''}
   </section>`;
 }
 function awPanelHtml() {
   const years = [...new Set([...awDays().map(d => Number(d.slice(0, 4))), new Date().getFullYear()])].sort();
-  const { days, months, rows: all } = awStats(awYear);
+  const { days, months, rows: all, taskMonths } = awStats(awYear);
   const rows = all.filter(r => r.s.active !== false || r.total > 0).sort((a, b) => b.total - a.total || a.s.name.localeCompare(b.s.name, 'es'));
   const nStud = awStudents().length;
   const head = `<div class="btns" style="margin-bottom:14px">
@@ -3286,7 +3316,7 @@ function awPanelHtml() {
   const fmt1 = n => n.toLocaleString('es', { maximumFractionDigits: 1 });
   const cell = (r, m) => {
     const v = r.months[m] || 0, t = v / maxCell, c = r.mc[m] || {};
-    const tip = `${r.s.name} · ${cap(MESES[m])}: ${v} pts — ` + AW_CRIT.map(([k, l]) => `${l} ${c[k] || 0}`).join(', ');
+    const tip = `${r.s.name} · ${cap(MESES[m])}: ${v} pts — ` + AW_CRIT.map(([k, l]) => `${l} ${c[k] || 0}`).join(', ') + `, Tarea ${c.t || 0}`;
     const style = v ? `background:color-mix(in srgb, var(--accent-strong) ${Math.round(10 + t * 78)}%, var(--surface-solid));color:${t > .55 ? 'var(--on-accent)' : 'var(--ink)'}` : 'background:var(--accent-softer);color:var(--muted)';
     return `<td title="${esc(tip)}" style="${style}">${v}</td>`;
   };
@@ -3294,7 +3324,7 @@ function awPanelHtml() {
     <div class="tiles">
       <div class="tile"><span>Domingos registrados</span><strong>${days.length}</strong></div>
       <div class="tile"><span>Asistencia promedio</span><strong>${fmt1(avgAtt)}</strong><small>${nStud ? Math.round(avgAtt / nStud * 100) + '% de ' + nStud + ' alumnas' : ''}</small></div>
-      <div class="tile"><span>Puntos entregados</span><strong>${totalPts}</strong><small>Máximo por alumna: ${days.length * 5}</small></div>
+      <div class="tile"><span>Puntos entregados</span><strong>${totalPts}</strong><small>Máximo por alumna: ${days.length * 5 + taskMonths.length * AW_TASK_PTS}</small></div>
       <div class="tile"><span>Destacada de ${MESES[lastM]}</span><strong>${leader?.months[lastM] ? esc(leader.s.name) : '—'}</strong><small>${leader?.months[lastM] ? leader.months[lastM] + ' pts' : ''}</small></div>
     </div>
     <div class="grid">
@@ -3316,7 +3346,11 @@ function awPanelHtml() {
           const n = rows.reduce((sum, r) => sum + r.crit[k], 0), base = k === 'a' ? days.length * nStud : totalAtt, pc = base ? Math.min(100, n / base * 100) : 0;
           return `<div class="hbar" title="${l}: ${n} de ${base}"><span>${ic(i)} ${l}</span><div class="track"><div class="fill" style="width:${pc}%"></div></div><em>${Math.round(pc)}%<small>${n}</small></em></div>`;
         }).join('')}
-        <p class="hint" style="margin-top:8px">Asistencia sobre el total posible de alumnas activas; los demás criterios sobre las asistencias.</p>
+        ${taskMonths.length ? (() => {
+          const n = rows.reduce((sum, r) => sum + r.crit.t, 0), base = taskMonths.length * nStud, pc = base ? Math.min(100, n / base * 100) : 0;
+          return `<div class="hbar" title="Tarea del mes: ${n} de ${base}"><span>${ic('notebook')} Tarea del mes</span><div class="track"><div class="fill" style="width:${pc}%"></div></div><em>${Math.round(pc)}%<small>${n}</small></em></div>`;
+        })() : ''}
+        <p class="hint" style="margin-top:8px">Asistencia sobre el total posible de alumnas activas; los demás criterios sobre las asistencias; la tarea sobre los meses con tarea.</p>
       </section>
     </div>`;
 }
@@ -3343,25 +3377,51 @@ function awAlumnasHtml() {
     </section></div>`;
 }
 function awStudentModal(st) {
-  const { months, rows } = awStats(awYear), r = rows.find(x => x.s.id === st.id);
+  const { months, rows, taskMonths } = awStats(awYear), r = rows.find(x => x.s.id === st.id);
   const hist = awDays().filter(d => S.awards.days[d][st.id]).reverse().slice(0, 8);
   openModal(st.name, `
     <div class="tithe"><div><span class="lesson-meta">Total ${awYear}</span><strong>${r?.total || 0} pts</strong></div><div><span class="lesson-meta">Asistencias ${awYear}</span><strong>${r?.crit.a || 0}</strong></div></div>
-    ${months.length ? `<div class="aw-table-wrap"><table class="heat small"><thead><tr><th>Mes</th>${AW_CRIT.map(([, l, i]) => `<th title="${l}" aria-label="${l}">${ic(i)}</th>`).join('')}<th>Pts</th></tr></thead>
-      <tbody>${months.map(m => { const c = r?.mc[m] || {}; return `<tr><td class="name">${cap(MESES[m])}</td>${AW_CRIT.map(([k]) => `<td>${c[k] || 0}</td>`).join('')}<td class="tot">${r?.months[m] || 0}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
-    ${hist.length ? `<h3 class="sub-h">Últimos domingos</h3><ul class="list plain">${hist.map(d => { const m = S.awards.days[d][st.id]; return `<li class="pr"><span class="pr-t">${shortDate(d)}</span><small>${AW_CRIT.filter(([k]) => m[k]).map(([, l]) => l).join(' · ') || 'Ausente'}</small><strong>${awPts(m)}</strong></li>`; }).join('')}</ul>` : empty('Sin registros todavía', 'clipboard-text')}`,
+    ${months.length ? `<div class="aw-table-wrap"><table class="heat small"><thead><tr><th>Mes</th>${AW_CRIT.map(([, l, i]) => `<th title="${l}" aria-label="${l}">${ic(i)}</th>`).join('')}<th title="Tarea del mes" aria-label="Tarea del mes">${ic('notebook')}</th><th>Pts</th></tr></thead>
+      <tbody>${months.map(m => { const c = r?.mc[m] || {}; return `<tr><td class="name">${cap(MESES[m])}</td>${AW_CRIT.map(([k]) => `<td>${c[k] || 0}</td>`).join('')}<td>${c.t || 0}</td><td class="tot">${r?.months[m] || 0}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${taskMonths.length ? `<h3 class="sub-h">Tareas del mes</h3><ul class="list plain">${taskMonths.map(ym => { const d = awTaskDay(st.id, ym); return `<li class="pr"><span class="pr-t">${cap(awYmLabel(ym))}${S.awards.tasks[ym] ? ` <small>${esc(S.awards.tasks[ym])}</small>` : ''}</span><small>${d ? 'Entregada el ' + shortDate(d) : 'Pendiente'}</small><strong>${d ? AW_TASK_PTS : 0}</strong></li>`; }).join('')}</ul>` : ''}
+    ${hist.length ? `<h3 class="sub-h">Últimos domingos</h3><ul class="list plain">${hist.map(d => { const m = S.awards.days[d][st.id]; return `<li class="pr"><span class="pr-t">${shortDate(d)}</span><small>${[...AW_CRIT.filter(([k]) => m[k]).map(([, l]) => l), ...(m.t ? ['Tarea de ' + MESES[Number(m.t.slice(5, 7)) - 1]] : [])].join(' · ') || 'Ausente'}</small><strong>${awPts(m)}</strong></li>`; }).join('')}</ul>` : empty('Sin registros todavía', 'clipboard-text')}`,
     { noSave: true });
 }
 
 Object.assign(ACT, {
   awTab: el => { awTab = el.dataset.t; renderAll(); },
-  awNav: el => { awDate = ymd(addDays(fromYmd(awDate), Number(el.dataset.d))); renderAll(); },
-  awToday: () => { awDate = lastSunday(); renderAll(); },
+  awNav: el => { awDate = ymd(addDays(fromYmd(awDate), Number(el.dataset.d))); awTaskMonth = null; renderAll(); },
+  awToday: () => { awDate = lastSunday(); awTaskMonth = null; renderAll(); },
   awMark: el => {
     const day = S.awards.days[awDate] = S.awards.days[awDate] || {};
     const m = day[el.dataset.s] = day[el.dataset.s] || {}, k = el.dataset.k;
     m[k] = !m[k];
-    if (k === 'a' && !m.a) AW_CRIT.forEach(([x]) => { m[x] = false; });
+    if (k === 'a' && !m.a) { AW_CRIT.forEach(([x]) => { m[x] = false; }); delete m.t; }
+    awCleanDay(); save(); renderAll();
+  },
+  awTask: el => {
+    const sid = el.dataset.s, ym = awYm(), m = S.awards.days[awDate]?.[sid];
+    if (!m?.a) return;
+    if (m.t === ym) delete m.t;
+    else {
+      if (m.t && !confirm(`Este domingo ya tiene anotada la tarea de ${awYmLabel(m.t)}. ¿Cambiarla por la de ${awYmLabel(ym)}?`)) return;
+      const prev = awTaskDay(sid, ym);
+      if (prev) { delete S.awards.days[prev][sid].t; awCleanDay(prev); }
+      m.t = ym;
+    }
+    awCleanDay(); save(); renderAll();
+  },
+  awTaskCol: () => {
+    const ym = awYm(), day = S.awards.days[awDate] || {};
+    const eligible = awStudents().filter(x => day[x.id]?.a);
+    if (!eligible.length) { toast({ title: 'Primero marca la asistencia', icon: 'user-check' }); return; }
+    const allOn = eligible.every(x => day[x.id].t === ym);
+    // Al marcar todas no toca a quien ya la entregó otro domingo ni a quien trajo aquí la de otro mes
+    eligible.forEach(x => {
+      const m = day[x.id];
+      if (allOn) delete m.t;
+      else if (!m.t && !awTaskDay(x.id, ym)) m.t = ym;
+    });
     awCleanDay(); save(); renderAll();
   },
   awCol: el => {
@@ -3372,7 +3432,7 @@ Object.assign(ACT, {
     eligible.forEach(x => {
       const m = day[x.id] = day[x.id] || {};
       m[k] = !allOn;
-      if (k === 'a' && allOn) AW_CRIT.forEach(([y]) => { m[y] = false; });
+      if (k === 'a' && allOn) { AW_CRIT.forEach(([y]) => { m[y] = false; }); delete m.t; }
     });
     awCleanDay(); save(); renderAll();
   },
@@ -3392,8 +3452,8 @@ Object.assign(ACT, {
     const { months, rows } = awStats(awYear);
     const q = v => `"${String(v).replace(/"/g, '""')}"`;
     const list = rows.filter(r => r.s.active !== false || r.total > 0).sort((a, b) => b.total - a.total);
-    const lines = [['Alumna', ...months.map(m => cap(MESES[m])), 'Total', ...AW_CRIT.map(([, l]) => l)].map(q).join(';'),
-      ...list.map(r => [r.s.name, ...months.map(m => r.months[m] || 0), r.total, ...AW_CRIT.map(([k]) => r.crit[k])].map(q).join(';'))];
+    const lines = [['Alumna', ...months.map(m => cap(MESES[m])), 'Total', ...AW_CRIT.map(([, l]) => l), 'Tarea del mes'].map(q).join(';'),
+      ...list.map(r => [r.s.name, ...months.map(m => r.months[m] || 0), r.total, ...AW_CRIT.map(([k]) => r.crit[k]), r.crit.t].map(q).join(';'))];
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
     a.download = `plan-de-premios-${awYear}.csv`;
@@ -3402,8 +3462,12 @@ Object.assign(ACT, {
   },
 });
 Object.assign(CHG, {
-  awDate: el => { if (el.value) { awDate = el.value; renderAll(); } },
+  awDate: el => { if (el.value) { awDate = el.value; awTaskMonth = null; renderAll(); } },
+  awTaskMonth: el => { awTaskMonth = el.value; renderAll(); },
   awYear: el => { awYear = Number(el.value); renderAll(); },
+});
+Object.assign(INP, {
+  awTaskText: el => { const ym = awYm(), v = el.value.trim(); if (v) S.awards.tasks[ym] = v; else delete S.awards.tasks[ym]; save(); },
 });
 FORMS.awAdd = f => {
   const have = new Set(S.awards.students.map(x => x.name.toLowerCase()));
@@ -4153,6 +4217,8 @@ const searchSources = () => [
       open: () => { go('iglesia'); flash(t.id); } })) },
   { label: 'Alumnas', icon: 'student', items: () => S.awards.students.map(st => ({ title: st.name, sub: st.active === false ? 'Archivada' : 'Plan de premios', fields: [st.name],
       open: () => { awTab = 'alumnas'; go('premios'); awStudentModal(st); } })) },
+  { label: 'Tareas del mes', icon: 'notebook', items: () => Object.entries(S.awards.tasks).map(([ym, text]) => ({ title: text, sub: 'Plan de premios · ' + cap(awYmLabel(ym)), fields: [text],
+      open: () => { awTab = 'registro'; awTaskMonth = ym; go('premios'); } })) },
   { label: 'Cumpleaños', icon: 'cake', items: () => S.birthdays.map(b => ({ title: b.name, sub: `${b.day} de ${MESES[b.month - 1]}`, fields: [b.name, b.notes],
       open: () => { go('cumples'); bdModal(b); } })) },
   { label: 'Lugares', icon: 'map-pin', items: () => S.places.map(p => ({ title: p.name, sub: p.address || (PLACE_CATS[p.cat] || PLACE_CATS.otro)[0], fields: [p.name, p.address, p.notes],
