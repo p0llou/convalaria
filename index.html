@@ -734,6 +734,75 @@
   .bd-near { color: var(--accent-strong); font-size: 16px; }
   .pr strong { font-variant-numeric: tabular-nums; }
 
+  /* Ayudas de memoria */
+  .ay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .ay-boards { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 auto; }
+  .ay-tab { font: inherit; font-weight: 700; font-size: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .ay-tab small { color: var(--muted); font-weight: 800; margin-left: 2px; }
+  .ay-tab.on { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
+  .ay-tab.on small { color: inherit; opacity: .8; }
+  .ay-q { flex: 0 1 260px; width: auto; }
+  .ay-new { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .ay-wrap { position: relative; height: calc(100vh - 290px); height: calc(100dvh - 290px); min-height: 440px; overflow: auto; border-radius: 20px; border: 1px solid var(--line);
+    background: radial-gradient(color-mix(in srgb, var(--muted) 35%, transparent) 1.2px, transparent 1.4px) 0 0 / 24px 24px, color-mix(in srgb, var(--surface-solid) 70%, transparent); }
+  .ay-canvas { position: relative; }
+  .ay-empty { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .card > .ay-empty { position: static; }
+  .ay-list { columns: 290px; column-gap: 14px; }
+  .ay-list .ay-note { break-inside: avoid; margin-bottom: 14px; }
+  .ay-list .ay-dim { display: none; }
+  .ay-note { --mc: #ffe58a; position: relative; display: flex; flex-direction: column; color: var(--ink); font-size: 14.5px; line-height: 1.45;
+    background: color-mix(in srgb, var(--mc) 62%, var(--surface-solid)); border-top: 6px solid var(--mc); border-radius: 6px 6px 14px 6px;
+    box-shadow: 0 12px 24px -14px rgba(0,0,0,.35); transition: opacity .15s, box-shadow .15s; }
+  html[data-mode="dark"] .ay-note { background: color-mix(in srgb, var(--mc) 20%, var(--surface-solid)); border-top-color: color-mix(in srgb, var(--mc) 70%, var(--surface-solid)); }
+  .ay-canvas .ay-note { position: absolute; }
+  .ay-note.fixed { overflow: hidden; }
+  .ay-note.fixed .ay-body { overflow: auto; flex: 1; min-height: 0; }
+  .ay-note.editing { z-index: 9999 !important; box-shadow: 0 0 0 2.5px var(--accent-strong), 0 18px 30px -14px rgba(0,0,0,.4); }
+  .ay-note.dragging { box-shadow: 0 24px 40px -16px rgba(0,0,0,.45); }
+  .ay-note.ay-dim { opacity: .22; }
+  .ay-head { display: flex; align-items: center; gap: 4px; padding: 6px 6px 2px 10px; }
+  .ay-canvas .ay-head { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .ay-note.dragging .ay-head { cursor: grabbing; }
+  .ay-grip { color: color-mix(in srgb, var(--ink) 45%, transparent); font-size: 16px; margin-left: -6px; }
+  .ay-title { flex: 1; min-width: 0; margin: 0; font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+  .ay-title-in { flex: 1; min-width: 0; font: 700 16px var(--font-body); color: var(--ink); background: color-mix(in srgb, var(--surface-solid) 60%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 8px; padding: 5px 8px; }
+  .ay-count { flex: none; font-size: 12px; font-weight: 800; color: color-mix(in srgb, var(--ink) 70%, transparent); background: color-mix(in srgb, var(--surface-solid) 55%, transparent); border-radius: 999px; padding: 1px 8px; }
+  .ay-tools { display: flex; flex: none; }
+  .ay-tb { font: inherit; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: color-mix(in srgb, var(--ink) 70%, transparent); font-size: 17px; cursor: pointer; display: grid; place-items: center; }
+  .ay-tb:hover { background: color-mix(in srgb, var(--surface-solid) 55%, transparent); color: var(--ink); }
+  .ay-body { padding: 4px 14px 14px; overflow-wrap: anywhere; }
+  .ay-body p { margin: 0 0 8px; }
+  .ay-body h4 { margin: 10px 0 4px; font-size: 15px; font-weight: 800; }
+  .ay-body ol, .ay-body ul { margin: 0 0 8px; padding-left: 22px; }
+  .ay-body ol li::marker { font-weight: 800; color: color-mix(in srgb, var(--ink) 70%, transparent); }
+  .ay-body li { margin: 3px 0; }
+  .ay-body hr { border: 0; border-top: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); margin: 10px 0; }
+  .ay-body .ay-checks { list-style: none; padding: 0; }
+  .ay-checks li { display: flex; gap: 8px; align-items: flex-start; }
+  .ay-checks li.done span { text-decoration: line-through; opacity: .6; }
+  .ay-box { flex: none; width: 20px; height: 20px; margin-top: 1px; padding: 0; border-radius: 6px; border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); background: color-mix(in srgb, var(--surface-solid) 60%, transparent); color: var(--on-accent); cursor: pointer; display: grid; place-items: center; font-size: 12px; }
+  .ay-checks li.done .ay-box { background: var(--accent-strong); border-color: var(--accent-strong); }
+  .ay-tbl { overflow-x: auto; margin: 0 0 8px; }
+  .ay-body table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .ay-body th, .ay-body td { text-align: left; padding: 5px 8px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 15%, transparent); vertical-align: top; }
+  .ay-body th { font-weight: 800; }
+  .ay-code { position: relative; margin: 0 0 8px; }
+  .ay-code pre { margin: 0; padding: 10px 42px 10px 12px; border-radius: 10px; overflow-x: auto; white-space: pre; color: var(--ink); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: color-mix(in srgb, var(--surface-solid) 62%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); }
+  .ay-copy { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border: 0; border-radius: 8px; background: var(--accent-strong); color: var(--on-accent); cursor: pointer; display: grid; place-items: center; font-size: 15px; }
+  .ay-ic { font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: color-mix(in srgb, var(--surface-solid) 65%, transparent); border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); border-radius: 6px; padding: 1px 5px; cursor: copy; }
+  .ay-kbd { font: 800 12px var(--font-body); color: var(--ink); background: var(--surface-solid); border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; white-space: nowrap; }
+  .ay-reset { font-size: 12.5px; }
+  .ay-ta { flex: 1; min-height: 140px; margin: 4px 10px 0; resize: none; font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); background: color-mix(in srgb, var(--surface-solid) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 8px; padding: 8px 10px; }
+  .ay-ta:focus, .ay-title-in:focus { border-color: var(--accent-strong); outline: none; }
+  .ay-help { margin: 6px 12px 12px; font-size: 11.5px; color: color-mix(in srgb, var(--ink) 65%, transparent); line-height: 1.7; }
+  .ay-help code { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: color-mix(in srgb, var(--surface-solid) 55%, transparent); border-radius: 4px; padding: 0 3px; }
+  .ay-rz { position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; cursor: nwse-resize; touch-action: none; border-radius: 0 0 14px 0;
+    background: linear-gradient(135deg, transparent 52%, color-mix(in srgb, var(--ink) 30%, transparent) 52% 60%, transparent 60% 70%, color-mix(in srgb, var(--ink) 30%, transparent) 70% 78%, transparent 78%); }
+  .ay-muted { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+
   @media (max-width: 980px) {
     .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
     .tiles { grid-template-columns: 1fr 1fr; }
@@ -783,6 +852,8 @@
     .mk { width: 34px; height: 34px; font-size: 17px; }
     .aw-table td:first-child { padding-left: 10px; }
     .hbar.rank { grid-template-columns: minmax(100px, 140px) 1fr auto; }
+    .ay-q { flex: 1 1 100%; }
+    .ay-wrap { height: calc(100vh - 360px); height: calc(100dvh - 360px); min-height: 380px; }
   }
   @media print {
     .pg-grid { grid-template-columns: 1fr 1fr !important; }
@@ -819,6 +890,7 @@
     <button class="nav-btn" data-act="go" data-view="ideas"><span class="ic"><i class="ph-duotone ph-brain" aria-hidden="true"></i></span><span>Mapa mental</span></button>
     <button class="nav-btn" data-act="go" data-view="lugares"><span class="ic"><i class="ph-duotone ph-map-trifold" aria-hidden="true"></i></span><span>Lugares</span></button>
     <button class="nav-btn nav-fix" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
+    <button class="nav-btn" data-act="go" data-view="ayudas"><span class="ic"><i class="ph-duotone ph-notepad" aria-hidden="true"></i></span><span>Ayudas de memoria</span></button>
     <div class="nav-g">Tú</div>
     <button class="nav-btn" data-act="go" data-view="decorar"><span class="ic"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span><span>Decorar</span></button>
     <button class="nav-btn" data-act="toggleDark"><span class="ic"><i class="ph-duotone ph-moon-stars" aria-hidden="true"></i></span><span>Modo noche</span></button>
@@ -840,6 +912,7 @@
     <section class="view" id="view-ideas" hidden></section>
     <section class="view" id="view-lugares" hidden></section>
     <section class="view" id="view-finanzas" hidden></section>
+    <section class="view" id="view-ayudas" hidden></section>
     <section class="view" id="view-decorar" hidden></section>
   </main>
 </div>
@@ -942,6 +1015,7 @@ const defaults = () => ({
   awards: { students: [], days: {}, tasks: {} },
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
+  memos: [], memoBoards: [], memoBoard: 'general', memoLayout: null,
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -958,7 +1032,8 @@ function normalize(raw) {
   delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+  if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
@@ -2829,7 +2904,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -3479,6 +3554,306 @@ FORMS.awAdd = f => {
   toast({ title: added.length ? `${added.length} ${added.length === 1 ? 'alumna agregada' : 'alumnas agregadas'}` : 'No se agregó ninguna', text: skipped ? `${skipped} ya estaban en la lista.` : '', icon: 'users-three' });
 };
 
+/* ---------- Ayudas de memoria ---------- */
+// Notas adhesivas por tablero: S.memos = [{ id, board, title, body, color, x, y, w, h }] (px en el lienzo; h null = alto automático; orden del array = z-index)
+const MEMO_COLORS = ['#ffe58a', '#ffb8d2', '#d4c4ff', '#b5ecd2', '#b9dcff', '#ffcfae'];
+const MEMO_TPL = {   // clave → [botón, ícono, título, texto inicial]
+  nota: ['Nota', 'note', 'Nueva nota', ''],
+  pasos: ['Pasos', 'list-numbers', 'Paso a paso', '1. \n2. \n3. '],
+  check: ['Lista', 'check-square', 'Lista de verificación', '[ ] \n[ ] \n[ ] '],
+  tabla: ['Tabla', 'table', 'Teclas BIOS y arranque', 'Marca | BIOS | Menú de arranque\nHP | [[F10]] | [[F9]]\nDell | [[F2]] | [[F12]]\nLenovo | [[F1]] / [[F2]] | [[F12]]\nAsus | [[F2]] / [[Supr]] | [[F8]]\nAcer | [[F2]] | [[F12]]'],
+  codigo: ['Código', 'terminal-window', 'Comandos', '```\n\n```'],
+};
+const MEMO_CHK = /^(\s*(?:[-*•]\s+)?)\[( |x|X)\]\s?/;
+let memoEdit = null, memoQuery = '';
+const memoScroll = {};
+const memoLayout = () => S.memoLayout || (matchMedia('(max-width: 760px)').matches ? 'lista' : 'lienzo');
+const memoBoardId = () => findById(S.memoBoards, S.memoBoard) ? S.memoBoard : S.memoBoards[0].id;
+const memoOf = el => findById(S.memos, el.closest('.ay-note')?.dataset.id);
+// Índices de las líneas con casilla, sin contar las que están dentro de un bloque de código
+function memoChecks(body) {
+  let code = false;
+  return (body || '').split('\n').flatMap((l, i) => {
+    if (l.trim().startsWith('```')) { code = !code; return []; }
+    return !code && MEMO_CHK.test(l) ? [[i, /x/i.test(l.match(MEMO_CHK)[2])]] : [];
+  });
+}
+function memoInline(t) {
+  return t.split(/(`[^`]+`)/).map((p, i) => i % 2
+    ? `<code class="ay-ic" data-act="memoCopy" title="Tocar para copiar">${esc(p.slice(1, -1))}</code>`
+    : esc(p).replace(/\[\[(.+?)\]\]/g, '<kbd class="ay-kbd">$1</kbd>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')).join('');
+}
+// Formato liviano: ``` código, # subtítulo, --- línea, [ ] casilla, 1. pasos, - viñetas, a | b tabla
+function memoMd(body) {
+  const L = body.split('\n'), out = [];
+  const kind = l => {
+    const t = l.trim();
+    if (!t) return 'blank';
+    if (t.startsWith('```')) return 'code';
+    if (/^-{3,}$/.test(t)) return 'hr';
+    if (/^#{1,3}\s/.test(t)) return 'h';
+    if (MEMO_CHK.test(l)) return 'chk';
+    if (/^\d+[.)](\s|$)/.test(t)) return 'ol';
+    if (/^[-*•](\s|$)/.test(t)) return 'ul';
+    if (t.includes('|')) return 'tbl';
+    return 'p';
+  };
+  let i = 0;
+  while (i < L.length) {
+    const k = kind(L[i]);
+    if (k === 'blank') { i++; continue; }
+    if (k === 'code') {
+      const code = []; i++;
+      while (i < L.length && !L[i].trim().startsWith('```')) code.push(L[i++]);
+      i++;
+      out.push(`<div class="ay-code"><pre><code>${esc(code.join('\n'))}</code></pre><button class="ay-copy" data-act="memoCopy" title="Copiar" aria-label="Copiar">${ic('copy')}</button></div>`);
+      continue;
+    }
+    if (k === 'hr') { out.push('<hr>'); i++; continue; }
+    if (k === 'h') { out.push(`<h4>${memoInline(L[i].trim().replace(/^#+\s*/, ''))}</h4>`); i++; continue; }
+    const g = [];
+    while (i < L.length && kind(L[i]) === k) g.push([i, L[i++]]);
+    if (k === 'chk') out.push(`<ul class="ay-checks">${g.map(([n, l]) => {
+      const on = /x/i.test(l.match(MEMO_CHK)[2]);
+      return `<li class="${on ? 'done' : ''}"><button class="ay-box" data-act="memoCheck" data-l="${n}" aria-pressed="${on}" aria-label="Marcar">${on ? ic('check') : ''}</button><span>${memoInline(l.replace(MEMO_CHK, ''))}</span></li>`;
+    }).join('')}</ul>`);
+    else if (k === 'ol') out.push(`<ol start="${parseInt(g[0][1].trim())}">${g.map(([, l]) => `<li>${memoInline(l.trim().replace(/^\d+[.)]\s*/, ''))}</li>`).join('')}</ol>`);
+    else if (k === 'ul') out.push(`<ul>${g.map(([, l]) => `<li>${memoInline(l.trim().replace(/^[-*•]\s*/, ''))}</li>`).join('')}</ul>`);
+    else if (k === 'tbl') {
+      const rows = g.map(([, l]) => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())).filter(r => !r.every(c => /^:?-+:?$/.test(c)));
+      const cols = Math.max(...rows.map(r => r.length)), cells = (r, tag) => Array.from({ length: cols }, (_, j) => `<${tag}>${memoInline(r[j] || '')}</${tag}>`).join('');
+      out.push(`<div class="ay-tbl"><table><thead><tr>${cells(rows[0], 'th')}</tr></thead><tbody>${rows.slice(1).map(r => `<tr>${cells(r, 'td')}</tr>`).join('')}</tbody></table></div>`);
+    }
+    else out.push(`<p>${g.map(([, l]) => memoInline(l)).join('<br>')}</p>`);
+  }
+  return out.join('');
+}
+function memoNoteHtml(n, canvas) {
+  const ed = memoEdit === n.id, body = n.body || '', chk = memoChecks(body), done = chk.filter(c => c[1]).length;
+  const fixed = canvas && n.h;
+  const style = `--mc:${n.color || MEMO_COLORS[0]};` + (canvas ? `left:${n.x}px;top:${n.y}px;width:${n.w || 280}px;z-index:${S.memos.indexOf(n) + 1};${fixed ? `height:${n.h}px;` : ''}` : '');
+  const btn = (act, icon, label) => `<button class="ay-tb" data-act="${act}" title="${label}" aria-label="${label}">${ic(icon)}</button>`;
+  return `<article class="ay-note${ed ? ' editing' : ''}${fixed ? ' fixed' : ''}" data-id="${n.id}" style="${style}">
+    <header class="ay-head">${canvas ? `<span class="ay-grip" title="Arrastrar">${ic('dots-six-vertical')}</span>` : ''}
+      ${ed ? `<input class="ay-title-in" data-inp="memoTitle" maxlength="120" value="${esc(n.title)}" placeholder="Título" aria-label="Título">`
+        : `<h3 class="ay-title">${n.title ? esc(n.title) : '<span class="ay-muted">Sin título</span>'}</h3>`}
+      ${chk.length && !ed ? `<span class="ay-count" title="Casillas marcadas">${done}/${chk.length}</span>` : ''}
+      <span class="ay-tools">${ed ? btn('memoDone', 'check', 'Listo') : btn('memoEdit', 'pencil-simple', 'Editar')}${btn('memoColor', 'palette', 'Cambiar color')}${btn('memoMore', 'dots-three', 'Más opciones')}</span></header>
+    ${ed ? `<textarea class="ay-ta" data-inp="memoBody" spellcheck="false" placeholder="Escribe aquí…" aria-label="Contenido">${esc(body)}</textarea>
+      <p class="ay-help"><code>1.</code> pasos · <code>[ ]</code> casilla · <code>-</code> viñeta · <code>#</code> subtítulo · <code>a | b</code> tabla · <code>\`\`\`</code> bloque de código · <code>\`texto\`</code> copiable · <code>[[F12]]</code> tecla · <code>**negrita**</code></p>`
+      : `<div class="ay-body">${body.trim() ? memoMd(body) : '<p class="ay-muted">Toca el lápiz para escribir.</p>'}${done ? `<button class="linkish ay-reset" data-act="memoUncheck">${ic('arrow-counter-clockwise')} Desmarcar todo</button>` : ''}</div>`}
+    ${canvas ? '<span class="ay-rz" title="Arrastra para cambiar el tamaño. Doble clic: alto automático"></span>' : ''}
+  </article>`;
+}
+function renderAyudas(root) {
+  const old = $('.ay-wrap', root);
+  if (old) memoScroll[old.dataset.b] = [old.scrollLeft, old.scrollTop];
+  const bid = memoBoardId(), lay = memoLayout(), canvas = lay === 'lienzo';
+  const notes = S.memos.filter(n => n.board === bid);
+  const W = Math.max(1400, ...notes.map(n => n.x + (n.w || 280) + 300)), H = Math.max(900, ...notes.map(n => n.y + (n.h || 340) + 300));
+  const none = `<div class="ay-empty">${empty('Crea tu primera nota con los botones de arriba', 'note')}</div>`;
+  root.innerHTML = `
+    <div class="page-h"><div><h1>Ayudas de memoria</h1><p class="sub">Notas adhesivas para pasos, comandos, teclas y todo lo que no quieres olvidar.</p></div>
+      <div class="seg">${[['lienzo', 'Lienzo', 'squares-four'], ['lista', 'Lista', 'rows']].map(([k, l, i]) => `<button class="${lay === k ? 'on' : ''}" data-act="memoLayout" data-l="${k}" aria-pressed="${lay === k}">${ic(i)} ${l}</button>`).join('')}</div></div>
+    <div class="ay-bar">
+      <div class="ay-boards">${S.memoBoards.map(b => `<button class="ay-tab ${b.id === bid ? 'on' : ''}" data-act="memoBoard" data-id="${b.id}" aria-pressed="${b.id === bid}">${esc(b.name)} <small>${S.memos.filter(n => n.board === b.id).length}</small></button>`).join('')}
+        <button class="icon-btn" data-act="memoBoardAdd" title="Nuevo tablero" aria-label="Nuevo tablero">${ic('plus')}</button>
+        <button class="icon-btn" data-act="memoBoardEdit" title="Renombrar o eliminar este tablero" aria-label="Renombrar o eliminar este tablero">${ic('pencil-simple')}</button></div>
+      <input type="search" class="inp ay-q" data-inp="memoFilter" value="${esc(memoQuery)}" placeholder="Buscar en este tablero…" aria-label="Buscar en este tablero">
+    </div>
+    <div class="ay-new">${Object.entries(MEMO_TPL).map(([k, [l, i]], j) => `<button class="btn btn-sm${j ? '' : ' btn-primary'}" data-act="memoAdd" data-t="${k}">${ic(j ? i : 'plus')} ${l}</button>`).join('')}</div>
+    ${canvas ? `<div class="ay-wrap" data-b="${bid}"><div class="ay-canvas" style="width:${W}px;height:${H}px">${notes.map(n => memoNoteHtml(n, true)).join('')}</div>${notes.length ? '' : none}</div>`
+      : notes.length ? `<div class="ay-list">${[...notes].sort((a, b) => a.y - b.y || a.x - b.x).map(n => memoNoteHtml(n, false)).join('')}</div>` : `<div class="card">${none}</div>`}`;
+  const wrap = $('.ay-wrap', root);
+  if (wrap) {
+    const s = memoScroll[bid];
+    if (s) { wrap.scrollLeft = s[0]; wrap.scrollTop = s[1]; }
+    wrap.onpointerdown = memoPointerDown;
+  }
+  root.ondblclick = e => {
+    const rz = e.target.closest('.ay-rz');
+    if (rz) { const n = memoOf(rz); if (n) { n.h = null; save(); memoRefresh(n.id); } return; }
+    const b = e.target.closest('.ay-body');
+    if (b && !e.target.closest('button, code, a')) memoStartEdit(b.closest('.ay-note').dataset.id);
+  };
+  root.onkeydown = e => { if (e.key === 'Escape' && memoEdit) { e.preventDefault(); memoStopEdit(); } };
+  memoApplyFilter(root);
+  memoAutosize(root);
+}
+function memoApplyFilter(root) {
+  const words = sNorm(memoQuery).split(/\s+/).filter(Boolean);
+  $$('.ay-note', root).forEach(el => {
+    const n = findById(S.memos, el.dataset.id), hay = sNorm(`${n?.title} ${n?.body}`);
+    el.classList.toggle('ay-dim', !!words.length && !words.every(w => hay.includes(w)));
+  });
+}
+function memoAutosize(root) {
+  $$('.ay-note.editing:not(.fixed) .ay-ta', root).forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; });
+}
+// Redibuja solo una nota (mantiene el scroll del lienzo y no corta clicks en las demás)
+function memoRefresh(id) {
+  const root = $('#view-ayudas'), el = $(`.ay-note[data-id="${id}"]`, root), n = findById(S.memos, id);
+  if (current !== 'ayudas') return;
+  if (!el || !n) { renderAll(); return; }
+  el.outerHTML = memoNoteHtml(n, memoLayout() === 'lienzo');
+  memoApplyFilter(root); memoAutosize(root);
+}
+function memoFocus(id, title = false) {
+  const el = $(`#view-ayudas .ay-note[data-id="${id}"]`);
+  const f = el && $(title ? '.ay-title-in' : '.ay-ta', el);
+  if (!f) return;
+  f.focus({ preventScroll: true });
+  if (title) f.select(); else f.setSelectionRange(f.value.length, f.value.length);
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function memoStartEdit(id) {
+  const prev = memoEdit;
+  memoEdit = id;
+  if (prev && prev !== id) memoRefresh(prev);
+  memoRefresh(id); memoFocus(id);
+}
+function memoStopEdit() {
+  const id = memoEdit;
+  memoEdit = null;
+  if (id) memoRefresh(id);
+}
+// Termina la edición al tocar fuera de la nota
+document.addEventListener('pointerdown', e => {
+  if (!memoEdit || current !== 'ayudas' || e.target.closest(`.ay-note[data-id="${memoEdit}"], dialog, #toasts`)) return;
+  memoStopEdit();
+}, true);
+function memoPointerDown(e) {
+  const note = e.target.closest('.ay-note');
+  if (!note || e.button > 0) return;
+  const rz = e.target.closest('.ay-rz');
+  if (!rz && (!e.target.closest('.ay-head') || e.target.closest('button, input'))) return;
+  const n = findById(S.memos, note.dataset.id);
+  if (!n) return;
+  e.preventDefault();
+  const canvas = note.parentElement, sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y, ow = note.offsetWidth, oh = note.offsetHeight;
+  let moved = false;
+  try { note.setPointerCapture(e.pointerId); } catch {}
+  const move = ev => {
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    if (!moved && Math.hypot(dx, dy) < 4) return;
+    if (!moved) { moved = true; note.classList.add('dragging'); note.style.zIndex = 9000; }
+    if (rz) {
+      n.w = Math.round(clamp(ow + dx, 200, 900)); n.h = Math.round(Math.max(120, oh + dy));
+      note.style.width = n.w + 'px'; note.style.height = n.h + 'px'; note.classList.add('fixed');
+    } else {
+      n.x = Math.max(0, ox + dx); n.y = Math.max(0, oy + dy);
+      note.style.left = n.x + 'px'; note.style.top = n.y + 'px';
+    }
+    canvas.style.width = Math.max(canvas.offsetWidth, n.x + note.offsetWidth + 300) + 'px';
+    canvas.style.height = Math.max(canvas.offsetHeight, n.y + note.offsetHeight + 300) + 'px';
+  };
+  const up = () => {
+    note.removeEventListener('pointermove', move); note.removeEventListener('pointerup', up); note.removeEventListener('pointercancel', up);
+    note.classList.remove('dragging');
+    if (!moved) return;
+    if (!rz) {
+      n.x = Math.round(n.x / 10) * 10; n.y = Math.round(n.y / 10) * 10;
+      note.style.left = n.x + 'px'; note.style.top = n.y + 'px';
+    }
+    S.memos = [...S.memos.filter(x => x !== n), n];   // la nota movida queda al frente
+    $$('.ay-note', canvas).forEach(el => { el.style.zIndex = S.memos.findIndex(x => x.id === el.dataset.id) + 1; });
+    save();
+  };
+  note.addEventListener('pointermove', move); note.addEventListener('pointerup', up); note.addEventListener('pointercancel', up);
+}
+function memoBoardModal(b = null) {
+  const count = b ? S.memos.filter(n => n.board === b.id).length : 0;
+  openModal(b ? 'Tablero' : 'Nuevo tablero', `
+    <label class="fld"><span>Nombre</span><input name="name" required maxlength="40" value="${esc(b?.name || '')}" placeholder="Ej.: Scripts, BIOS, Redes…"></label>
+    ${b ? `<p class="hint">${S.memoBoards.length > 1 ? `Eliminar el tablero borra también ${count === 1 ? 'su nota' : `sus ${count} notas`}.` : 'Es tu único tablero: crea otro antes de eliminarlo.'}</p>` : ''}`, {
+    onSave: fd => {
+      const name = fd.get('name').trim();
+      if (b) b.name = name;
+      else { const nb = { id: uid(), name }; S.memoBoards.push(nb); S.memoBoard = nb.id; memoQuery = ''; }
+      save(); renderAll();
+    },
+    onDelete: b && S.memoBoards.length > 1 ? () => {
+      S.memoBoards = S.memoBoards.filter(x => x !== b);
+      S.memos = S.memos.filter(n => n.board !== b.id);
+      S.memoBoard = S.memoBoards[0].id; memoEdit = null;
+      save(); renderAll();
+    } : null,
+  });
+}
+function memoModal(n) {
+  openModal('Nota', `
+    <label class="fld"><span>Tablero</span><select name="board">${S.memoBoards.map(b => `<option value="${b.id}" ${b.id === n.board ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></label>
+    <div class="fld"><span>Color</span><div class="swatches">${MEMO_COLORS.map(c => `<label class="swatch"><input type="radio" name="color" value="${c}" ${c === n.color ? 'checked' : ''}><span style="background:${c}"></span></label>`).join('')}</div></div>
+    <div class="btns"><button type="button" class="btn btn-sm" data-dup>${ic('copy')} Duplicar</button>${n.h ? `<button type="button" class="btn btn-sm" data-autoh>${ic('arrows-vertical')} Alto automático</button>` : ''}</div>`, {
+    onSave: fd => {
+      n.board = fd.get('board') || n.board; n.color = fd.get('color') || n.color;
+      save(); renderAll();
+    },
+    onDelete: () => { S.memos = S.memos.filter(x => x !== n); if (memoEdit === n.id) memoEdit = null; save(); renderAll(); },
+    onOpen: f => {
+      $('[data-dup]', f).onclick = () => {
+        const c = { ...n, id: uid(), x: n.x + 30, y: n.y + 30, title: n.title ? n.title + ' (copia)' : '', created: Date.now() };
+        S.memos.push(c); save(); modal.close(); renderAll(); memoFlash(c.id);
+      };
+      const ah = $('[data-autoh]', f);
+      if (ah) ah.onclick = () => { n.h = null; save(); modal.close(); renderAll(); };
+    },
+  });
+}
+function memoFlash(id) {
+  const el = $(`#view-ayudas .ay-note[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+Object.assign(ACT, {
+  memoLayout: el => { S.memoLayout = el.dataset.l; save(); renderAll(); },
+  memoBoard: el => { S.memoBoard = el.dataset.id; memoEdit = null; save(); renderAll(); },
+  memoBoardAdd: () => memoBoardModal(),
+  memoBoardEdit: () => memoBoardModal(findById(S.memoBoards, memoBoardId())),
+  memoAdd: el => {
+    const [, , title, body] = MEMO_TPL[el.dataset.t], bid = memoBoardId(), wrap = $('#view-ayudas .ay-wrap');
+    const k = S.memos.filter(n => n.board === bid).length % 6, r10 = v => Math.round(v / 10) * 10;
+    const n = { id: uid(), board: bid, title, body, color: MEMO_COLORS[S.memos.length % MEMO_COLORS.length],
+      x: r10((wrap?.scrollLeft || 0) + 30 + k * 30), y: r10((wrap?.scrollTop || 0) + 30 + k * 30), w: el.dataset.t === 'tabla' ? 400 : 280, h: null, created: Date.now() };
+    S.memos.push(n); memoEdit = n.id; memoQuery = '';
+    save(); renderAll(); memoFocus(n.id, true);
+  },
+  memoEdit: el => memoStartEdit(el.closest('.ay-note').dataset.id),
+  memoDone: () => memoStopEdit(),
+  memoColor: el => {
+    const n = memoOf(el);
+    if (!n) return;
+    n.color = MEMO_COLORS[(MEMO_COLORS.indexOf(n.color) + 1) % MEMO_COLORS.length];
+    el.closest('.ay-note').style.setProperty('--mc', n.color); save();
+  },
+  memoMore: el => { const n = memoOf(el); n && memoModal(n); },
+  memoCheck: el => {
+    const n = memoOf(el);
+    if (!n) return;
+    const L = n.body.split('\n'), i = Number(el.dataset.l);
+    L[i] = L[i].replace(MEMO_CHK, (m, pre, v) => `${pre}[${v.trim() ? ' ' : 'x'}] `);
+    n.body = L.join('\n'); save(); memoRefresh(n.id);
+  },
+  memoUncheck: el => {
+    const n = memoOf(el);
+    if (!n) return;
+    const L = n.body.split('\n');
+    memoChecks(n.body).forEach(([i]) => { L[i] = L[i].replace(MEMO_CHK, (m, pre) => `${pre}[ ] `); });
+    n.body = L.join('\n'); save(); memoRefresh(n.id);
+  },
+  memoCopy: el => {
+    const t = el.matches('code') ? el.textContent : $('code', el.closest('.ay-code')).textContent;
+    if (!navigator.clipboard) { toast({ title: 'No se pudo copiar', icon: 'warning' }); return; }
+    navigator.clipboard.writeText(t).then(() => toast({ title: 'Copiado', icon: 'copy' }), () => toast({ title: 'No se pudo copiar', icon: 'warning' }));
+  },
+});
+Object.assign(INP, {
+  memoTitle: el => { const n = memoOf(el); if (n) { n.title = el.value; save(); } },
+  memoBody: el => { const n = memoOf(el); if (n) { n.body = el.value; save(); memoAutosize($('#view-ayudas')); } },
+  memoFilter: el => { memoQuery = el.value; memoApplyFilter($('#view-ayudas')); },
+});
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -3870,7 +4245,7 @@ Object.assign(ACT, {
 // antes de recibir la primera foto de la nube: así un dispositivo con datos viejos no pisa la nube.
 const FB_V = '10.14.1';
 const SYNC_KEY = 'convalaria-sync';
-const LOCAL_KEYS = ['lastView', 'plannerView', 'showBlocks'];
+const LOCAL_KEYS = ['lastView', 'plannerView', 'showBlocks', 'memoBoard', 'memoLayout'];
 const SYNC_KEYS = Object.keys(defaults()).filter(k => !LOCAL_KEYS.includes(k));
 let syncMeta = (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch { return {}; } })();
 if (!syncMeta.device) syncMeta.device = uid();
@@ -4219,6 +4594,8 @@ const searchSources = () => [
       open: () => { awTab = 'alumnas'; go('premios'); awStudentModal(st); } })) },
   { label: 'Tareas del mes', icon: 'notebook', items: () => Object.entries(S.awards.tasks).map(([ym, text]) => ({ title: text, sub: 'Plan de premios · ' + cap(awYmLabel(ym)), fields: [text],
       open: () => { awTab = 'registro'; awTaskMonth = ym; go('premios'); } })) },
+  { label: 'Ayudas de memoria', icon: 'notepad', items: () => S.memos.map(n => ({ title: n.title || 'Nota sin título', sub: findById(S.memoBoards, n.board)?.name || 'Ayudas de memoria', fields: [n.title, n.body],
+      open: () => { S.memoBoard = n.board; memoQuery = ''; go('ayudas'); memoFlash(n.id); } })) },
   { label: 'Cumpleaños', icon: 'cake', items: () => S.birthdays.map(b => ({ title: b.name, sub: `${b.day} de ${MESES[b.month - 1]}`, fields: [b.name, b.notes],
       open: () => { go('cumples'); bdModal(b); } })) },
   { label: 'Lugares', icon: 'map-pin', items: () => S.places.map(p => ({ title: p.name, sub: p.address || (PLACE_CATS[p.cat] || PLACE_CATS.otro)[0], fields: [p.name, p.address, p.notes],
