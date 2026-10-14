@@ -4906,22 +4906,13 @@ function renderFamilias(root) {
 }
 
 /* Fichas y vínculos */
-function fmPersonModal(p = null, opts = {}) {
-  const x = p || { name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', roles: '', notes: '' };
-  let photo = x.photo;
-  const rel = [];
-  if (p) {
-    fmParents(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === id && k.b === p.id), fmG(fmP(id).sex, 'Padre', 'Madre'), id]));
-    fmCouples(p.id).forEach(k => rel.push([k, `Pareja · ${(FM_COUPLE[k.status] || FM_COUPLE.casados)[0]}`, k.a === p.id ? k.b : k.a]));
-    fmChildren(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === p.id && k.b === id), fmG(fmP(id).sex, 'Hijo', 'Hija'), id]));
-    fmFriends(p.id).forEach(id => rel.push([fmLinked(p.id, id), fmG(fmP(id).sex, 'Amigo', 'Amiga'), id]));
-  }
-  const sibs = p ? fmSiblings(p.id) : [];
+const FM_BLANK = () => ({ name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', roles: '', notes: '' });
+function fmFieldsHtml(x, req = true) {
   const yr = (n, v, l) => `<label class="fld"><span>${l}</span><input name="${n}" inputmode="numeric" maxlength="4" value="${esc(v)}" placeholder="Año"></label>`;
-  openModal(p ? fmFull(p) : 'Nueva persona', `
+  return `
     <div class="fm-photo"><span class="fm-photo-pv" data-pv style="--fc:${fmColor(x)}">${fmAv({ ...x, name: x.name || '?' })}</span>
-      <div class="btns"><button type="button" class="btn btn-sm" data-photo>${ic('camera')} ${photo ? 'Cambiar' : 'Subir'} foto</button><button type="button" class="btn btn-sm" data-nophoto ${photo ? '' : 'hidden'}>Quitar</button></div></div>
-    <label class="fld"><span>Nombres</span><input name="name" required maxlength="80" value="${esc(x.name)}"></label>
+      <div class="btns"><button type="button" class="btn btn-sm" data-photo>${ic('camera')} ${x.photo ? 'Cambiar' : 'Subir'} foto</button><button type="button" class="btn btn-sm" data-nophoto ${x.photo ? '' : 'hidden'}>Quitar</button></div></div>
+    <label class="fld"><span>Nombres</span><input name="name" ${req ? 'required' : ''} maxlength="80" value="${esc(x.name)}"></label>
     <div class="row2"><label class="fld"><span>Primer apellido</span><input name="last1" maxlength="60" value="${esc(x.last1)}"></label>
       <label class="fld"><span>Segundo apellido</span><input name="last2" maxlength="60" value="${esc(x.last2)}"></label></div>
     <label class="fld"><span>Es</span><select name="sex"><option value="">Sin indicar</option><option value="f" ${x.sex === 'f' ? 'selected' : ''}>Mujer</option><option value="m" ${x.sex === 'm' ? 'selected' : ''}>Hombre</option></select></label>
@@ -4930,6 +4921,29 @@ function fmPersonModal(p = null, opts = {}) {
     <div class="row2">${yr('from', x.from, 'Desde')}${yr('to', x.to, 'Hasta (si ya no está)')}</div>
     <label class="fld"><span>Ministerios o servicio</span><input name="roles" maxlength="160" value="${esc(x.roles)}" placeholder="Alabanza, escuela dominical, diácono…"></label>
     <label class="fld"><span>Notas</span><textarea name="notes" rows="3" placeholder="Recuerdos, anécdotas, dónde vive ahora…">${esc(x.notes)}</textarea></label>
+`;
+}
+function fmFieldsData(fd, photo) {
+  return { name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'), photo,
+    church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), roles: fd.get('roles').trim(), notes: fd.get('notes').trim() };
+}
+function fmPhotoBind(f, ph) {
+  const pv = $('[data-pv]', f), no = $('[data-nophoto]', f), pick = $('[data-photo]', f);
+  const paint = () => { pv.innerHTML = fmAv({ name: f.elements.name.value || '?', last1: f.elements.last1.value, photo: ph.id }); no.hidden = !ph.id; pick.lastChild.textContent = ` ${ph.id ? 'Cambiar' : 'Subir'} foto`; };
+  pick.onclick = async () => { const [id] = await pickImage(false, 480); if (id) { ph.id = id; paint(); } };
+  no.onclick = () => { ph.id = null; paint(); };
+}
+function fmPersonModal(p = null, opts = {}) {
+  const x = p || FM_BLANK(), ph = { id: x.photo };
+  const rel = [];
+  if (p) {
+    fmParents(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === id && k.b === p.id), fmG(fmP(id).sex, 'Padre', 'Madre'), id]));
+    fmCouples(p.id).forEach(k => rel.push([k, `Pareja · ${(FM_COUPLE[k.status] || FM_COUPLE.casados)[0]}`, k.a === p.id ? k.b : k.a]));
+    fmChildren(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === p.id && k.b === id), fmG(fmP(id).sex, 'Hijo', 'Hija'), id]));
+    fmFriends(p.id).forEach(id => rel.push([fmLinked(p.id, id), fmG(fmP(id).sex, 'Amigo', 'Amiga'), id]));
+  }
+  const sibs = p ? fmSiblings(p.id) : [];
+  openModal(p ? fmFull(p) : 'Nueva persona', `${fmFieldsHtml(x)}
     <label class="toggle"><input type="checkbox" name="me" ${p && p.id === S.meId || opts.me ? 'checked' : ''}> <span>Esta persona soy yo</span></label>
     ${p ? `<h3 class="sub-h">Vínculos</h3>
       ${rel.length || sibs.length ? `<ul class="list plain fm-rels">${rel.filter(r => r[0]).map(([k, l, id]) => `<li class="pr"><span class="pr-t"><small>${l}</small> ${esc(fmFull(fmP(id)))}</span><button type="button" class="icon-btn" data-unlink="${k.id}" title="Quitar vínculo" aria-label="Quitar vínculo">${ic('x')}</button></li>`).join('')}
@@ -4938,9 +4952,8 @@ function fmPersonModal(p = null, opts = {}) {
     onSave: fd => {
       const t = p || { id: uid(), created: Date.now() };
       const old = t.photo;
-      Object.assign(t, { name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'), photo,
-        church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), roles: fd.get('roles').trim(), notes: fd.get('notes').trim() });
-      if (old && old !== photo) imgStore.del(old);
+      Object.assign(t, fmFieldsData(fd, ph.id));
+      if (old && old !== ph.id) imgStore.del(old);
       if (!p) S.people.push(t);
       if (fd.get('me') === 'on') S.meId = t.id; else if (S.meId === t.id) S.meId = null;
       if (!fmP(fmFocus)) fmFocus = t.id;
@@ -4956,10 +4969,7 @@ function fmPersonModal(p = null, opts = {}) {
       fmPath = null; save(); renderAll();
     } : null,
     onOpen: f => {
-      const pv = $('[data-pv]', f), no = $('[data-nophoto]', f);
-      const paint = () => { pv.innerHTML = fmAv({ name: f.elements.name.value || '?', last1: f.elements.last1.value, photo }); no.hidden = !photo; };
-      $('[data-photo]', f).onclick = async () => { const [id] = await pickImage(false, 480); if (id) { photo = id; paint(); } };
-      no.onclick = () => { photo = null; paint(); };
+      fmPhotoBind(f, ph);
       $$('[data-unlink]', f).forEach(b => b.onclick = () => {
         if (!confirm('¿Quitar este vínculo?')) return;
         S.kin = S.kin.filter(k => k.id !== b.dataset.unlink); fmPath = null;
@@ -4972,16 +4982,13 @@ function fmPersonModal(p = null, opts = {}) {
 }
 function fmAddModal(base, type = 'parent') {
   const ps = fmParents(base.id), partners = fmPartners(base.id), others = fmSorted().filter(p => p.id !== base.id);
+  const ph = { id: null };
   const T = [['parent', 'Padre o madre'], ['couple', 'Pareja'], ['child', 'Hijo o hija'], ['sibling', 'Hermano o hermana'], ['friend', 'Amistad']];
   openModal(`Vínculo de ${fmShort(base)}`, `
     <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type">${T.map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     ${others.length ? `<div class="seg" style="margin-bottom:12px"><button type="button" class="on" data-who="new">Persona nueva</button><button type="button" data-who="old">Ya está en la lista</button></div>` : ''}
     <input type="hidden" name="who" value="new">
-    <div data-new>
-      <label class="fld"><span>Nombres</span><input name="name" maxlength="80"></label>
-      <div class="row2"><label class="fld"><span>Primer apellido</span><input name="last1" maxlength="60"></label><label class="fld"><span>Segundo apellido</span><input name="last2" maxlength="60"></label></div>
-      <label class="fld"><span>Es</span><select name="sex"><option value="">Sin indicar</option><option value="f">Mujer</option><option value="m">Hombre</option></select></label>
-    </div>
+    <div data-new>${fmFieldsHtml(FM_BLANK(), false)}</div>
     <label class="fld" data-old hidden><span>Persona</span><select name="other">${others.map(p => `<option value="${p.id}">${esc(fmFull(p))}</option>`).join('')}</select></label>
     <label class="fld" data-for="couple"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
     <label class="fld" data-for="child"><span>¿Con quién?</span><select name="with"><option value="">Nadie o no sé</option>${partners.map(id => `<option value="${id}">${esc(fmFull(fmP(id)))}</option>`).join('')}</select></label>
@@ -5004,10 +5011,9 @@ function fmAddModal(base, type = 'parent') {
       }
       let o = otherId && fmP(otherId);
       if (!o) {
-        o = { id: uid(), created: Date.now(), name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'),
-          photo: null, church: '', from: '', to: '', roles: '', notes: '' };
+        o = { id: uid(), created: Date.now(), ...fmFieldsData(fd, ph.id) };
         S.people.push(o);
-      }
+      } else if (ph.id) imgStore.del(ph.id);
       const link = (type, a, b, extra = {}) => { if (!fmLinked(a, b) || type === 'parent') S.kin.push({ id: uid(), type, a, b, ...extra }); };
       if (t === 'parent') { link('parent', o.id, base.id); if (ps.length === 1 && fd.get('pair') === 'on' && !fmLinked(ps[0], o.id)) link('couple', ps[0], o.id, { status: 'casados' }); }
       if (t === 'child') { link('parent', base.id, o.id); const w = fd.get('with'); if (w && !fmParents(o.id).includes(w)) link('parent', w, o.id); }
@@ -5031,6 +5037,7 @@ function fmAddModal(base, type = 'parent') {
       };
       f.elements.last1.oninput = f.elements.last2.oninput = e => { e.target.dataset.typed = '1'; };
       f.elements.type.onchange = sync; f.elements.with.onchange = sync; sync();
+      fmPhotoBind(f, ph);
       $$('[data-who]', f).forEach(b => b.onclick = () => {
         const old = b.dataset.who === 'old';
         f.elements.who.value = b.dataset.who;
