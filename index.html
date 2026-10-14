@@ -4058,10 +4058,11 @@ Object.assign(FORMS, {
 });
 
 /* ---------- Bitácora (libros, series y películas) ---------- */
-// S.media = [{ id, type: libro|serie|peli, title, year, by, cover (url), src ('ol:…' | 'tvm:…' | 'it:…', vacío si es manual), seasons, pages,
+// S.media = [{ id, type: libro|serie|peli, title, year, by, cover (url), src ('ol:…' | 'tvm:…' | 'wd:…', vacío si es manual), seasons, pages,
 //              want (por ver/leer), now (en curso), season (temporada en curso), fav, created }]
 // S.mediaLog = [{ id, media, date, rating (0–10, medias estrellas), review, season, again, created }]
-// Búsqueda gratis y sin clave: Open Library (libros), TVMaze (series), iTunes (películas). Las portadas se enlazan, no se guardan.
+// Búsqueda gratis y sin clave: Open Library (libros), Wikidata (películas y series, títulos en español) y TVMaze (portada y temporadas de series).
+// Las películas no traen portada (no hay fuente libre). Las portadas se enlazan, no se guardan.
 const BX = {
   libro: { one: 'Libro', many: 'Libros', icon: 'book-open', done: 'Leído', want: 'Por leer', now: 'Leyendo', again: 'Relectura' },
   serie: { one: 'Serie', many: 'Series', icon: 'television', done: 'Vista', want: 'Por ver', now: 'Viendo', again: 'Repetida' },
@@ -4082,14 +4083,65 @@ async function bxSearch(type, q) {
     return (r.docs || []).map(d => ({ src: 'ol:' + d.key, title: d.title, year: String(d.first_publish_year || ''), by: (d.author_name || []).slice(0, 2).join(', '),
       cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : '', pages: d.number_of_pages_median || null }));
   }
+  // Series: Wikidata (encuentra títulos en español) + búsqueda directa en TVMaze (nombres originales), sin repetir
   if (type === 'serie') {
-    const r = await bxJson(`https://api.tvmaze.com/search/shows?q=${enc}`);
-    return r.slice(0, 12).map(({ show: x }) => ({ src: 'tvm:' + x.id, tvm: x.id, title: x.name, year: (x.premiered || '').slice(0, 4),
-      by: x.network?.name || x.webChannel?.name || '', cover: (x.image?.medium || '').replace(/^http:/, 'https:') }));
+    const [wd, tv] = await Promise.allSettled([bxWikidata('serie', q), bxJson(`https://api.tvmaze.com/search/shows?q=${enc}`)]);
+    if (wd.status === 'rejected' && tv.status === 'rejected') throw wd.reason;
+    const out = wd.value || [];
+    (tv.value || []).forEach(({ show: x }) => {
+      if (out.some(y => y.tvm === x.id)) return;
+      out.push({ src: 'tvm:' + x.id, tvm: x.id, title: x.name, year: (x.premiered || '').slice(0, 4),
+        by: x.network?.name || x.webChannel?.name || '', cover: (x.image?.medium || '').replace(/^http:/, 'https:') });
+    });
+    return out.slice(0, 12);
   }
-  const r = await bxJson(`https://itunes.apple.com/search?term=${enc}&media=movie&entity=movie&limit=12&country=CL&lang=es_es`);
-  return (r.results || []).map(x => ({ src: 'it:' + x.trackId, title: x.trackName, year: (x.releaseDate || '').slice(0, 4), by: x.artistName || '',
-    cover: (x.artworkUrl100 || '').replace('100x100bb', '400x600bb') }));
+  return bxWikidata('peli', q);
+}
+// Wikidata: dos búsquedas en paralelo, por nombre (incluye títulos alternativos en español) y por tipo de obra (P31);
+// se ordena por cantidad de Wikipedias que la tienen (popularidad)
+const WD_API = 'https://www.wikidata.org/w/api.php?format=json&origin=*&';
+const WD_P31 = {
+  peli: ['Q11424', 'Q202866', 'Q24869', 'Q506240', 'Q229390', 'Q93204', 'Q24862'],
+  serie: ['Q5398426', 'Q1259759', 'Q63952888', 'Q117467246', 'Q581714', 'Q526877', 'Q23739'],
+};
+const WD_DESC = {
+  peli: /pel[ií]cula|largometraje|cortometraje|\bfilm\b/i,
+  serie: /serie (de televisi|web|animada|de anime|documental)|telenovela|miniserie|programa de televisi|television series|web series|\banime\b/i,
+};
+// Descarta discos, personajes y juegos; en series también temporadas y episodios sueltos (en películas "Parte 1" es válido)
+const WD_NOT = {
+  peli: /banda sonora|soundtrack|álbum|album|personaje|character|videojuego/i,
+  serie: /banda sonora|soundtrack|álbum|album|personaje|character|videojuego|temporada|season|episodio|episode|\bpart(e)? \d/i,
+};
+async function bxWikidata(type, q) {
+  const enc = encodeURIComponent, stmt = 'haswbstatement:' + WD_P31[type].map(x => 'P31=' + x).join('|');
+  const [a, b] = await Promise.all([
+    bxJson(`${WD_API}action=wbsearchentities&type=item&language=es&uselang=es&limit=50&search=${enc(q)}`),
+    bxJson(`${WD_API}action=query&list=search&srlimit=12&srsearch=${enc(q + ' ' + stmt)}`),
+  ]);
+  const byName = (a.search || []).filter(x => WD_DESC[type].test(x.description || '') && !WD_NOT[type].test(x.description || ''));
+  const ids = [...new Set([...byName.map(x => x.id), ...(b.query?.search || []).map(x => x.title)])].slice(0, 20);
+  if (!ids.length) return [];
+  const ents = (await bxJson(`${WD_API}action=wbgetentities&ids=${ids.join('|')}&languages=es|en&languagefallback=1&props=labels|descriptions|sitelinks${type === 'serie' ? '|claims' : ''}`)).entities || {};
+  const out = ids.map(id => ents[id]).filter(v => v && !('missing' in v)).map(v => {
+    const desc = v.descriptions?.es?.value || v.descriptions?.en?.value || '', m = byName.find(x => x.id === v.id)?.match;
+    const tvm = Number(v.claims?.P8600?.[0]?.mainsnak?.datavalue?.value) || null;
+    return { src: tvm ? 'tvm:' + tvm : 'wd:' + v.id, tvm,
+      title: m?.type === 'alias' && m.language.startsWith('es') ? m.text : v.labels?.es?.value || v.labels?.en?.value || '',
+      year: (desc.match(/\b(18|19|20)\d{2}\b/) || [''])[0], by: (desc.match(/dirigid[ao] por (.+)/i) || ['', ''])[1], cover: '',
+      pop: Object.keys(v.sitelinks || {}).length };
+  }).filter(x => x.title && !(type === 'serie' && WD_NOT.serie.test(x.title))).sort((x, y) => y.pop - x.pop).slice(0, 12);
+  // Series con ficha en TVMaze: portada, canal, año y temporadas
+  if (type === 'serie') await Promise.all(out.filter(x => x.tvm).map(async x => {
+    try {
+      const r = await bxJson(`https://api.tvmaze.com/shows/${x.tvm}?embed=seasons`);
+      x.cover = (r.image?.medium || '').replace(/^http:/, 'https:');
+      x.by = r.network?.name || r.webChannel?.name || x.by;
+      x.year ||= (r.premiered || '').slice(0, 4);
+      x.seasons = (r._embedded?.seasons || []).filter(z => z.number > 0).length || null;
+    } catch {}
+  }));
+  return out;
 }
 async function bxSeasons(m, tvm) {
   try { const r = await bxJson(`https://api.tvmaze.com/shows/${tvm}/seasons`); m.seasons = r.filter(x => x.number > 0).length || null; save(); } catch {}
@@ -4097,7 +4149,7 @@ async function bxSeasons(m, tvm) {
 function bxUpsert(type, x) {
   let m = S.media.find(y => y.src && y.src === x.src);
   if (!m) {
-    m = { id: uid(), type, title: x.title, year: x.year || '', by: x.by || '', cover: x.cover || '', src: x.src || '', seasons: null, pages: x.pages || null,
+    m = { id: uid(), type, title: x.title, year: x.year || '', by: x.by || '', cover: x.cover || '', src: x.src || '', seasons: x.seasons || null, pages: x.pages || null,
       want: false, now: false, season: null, fav: false, created: Date.now() };
     S.media.push(m);
   }
