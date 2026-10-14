@@ -906,6 +906,10 @@
   .fm-row-t strong { overflow-wrap: anywhere; }
   .fm-photo { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
   .fm-photo-pv .fm-av { width: 72px; height: 72px; font-size: 22px; }
+  .fm-av.dead { filter: grayscale(1); opacity: .8; }
+  .fm-dead { color: var(--muted); font-size: 12px; }
+  .fm-dead-f { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .fm-dead-f .fld { flex: 0 1 120px; }
   .fm-kst { width: auto; padding: 4px 8px; font-size: 13px; margin-left: auto; }
   .fm-rels small { color: var(--muted); font-weight: 700; margin-right: 4px; }
   @media (max-width: 760px) {
@@ -4584,7 +4588,7 @@ const fmFull = p => [p.name, p.last1, p.last2].filter(Boolean).join(' ');
 const fmShort = p => [p.name.trim().split(/\s+/)[0], p.last1].filter(Boolean).join(' ');
 const fmFamKey = p => sNorm(p.last1 || '').trim();
 const fmColor = p => { const k = fmFamKey(p); return k ? FM_COLORS[[...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % FM_COLORS.length] : '#977f8b'; };
-const fmAv = p => { const d = p.photo && IMG.get(p.photo); return `<span class="fm-av">${d ? `<img src="${d}" alt="">` : esc(((p.name[0] || '') + (p.last1?.[0] || '')).toUpperCase())}</span>`; };
+const fmAv = p => { const d = p.photo && IMG.get(p.photo); return `<span class="fm-av ${p.dead ? 'dead' : ''}">${d ? `<img src="${d}" alt="">` : esc(((p.name[0] || '') + (p.last1?.[0] || '')).toUpperCase())}</span>`; };
 const fmG = (sex, m, f) => sex === 'f' ? f : sex === 'm' ? m : m === f ? m : f === m.replace(/o\b/g, 'a') ? m.replace(/o\b/g, 'o/a') : `${m} o ${f}`;
 const fmParents = id => S.kin.filter(k => k.type === 'parent' && k.b === id).map(k => k.a);
 const fmChildren = id => S.kin.filter(k => k.type === 'parent' && k.a === id).map(k => k.b);
@@ -4705,7 +4709,7 @@ function fmTreeHtml() {
     const p = fmP(c.id), ch = FM_CHURCH[p.church];
     return `<button class="fm-card ${c.id === f.id ? 'focus' : ''}" data-fm="${c.id}" style="left:${c.x + ox}px;top:${c.y + oy}px;--fc:${fmColor(p)}" title="${esc(fmFull(p))}">
       ${p.id === S.meId ? `<span class="fm-me" title="Tú">${ic('heart', 'fill')}</span>` : ''}${ch && p.church !== 'nunca' ? `<span class="fm-tag ${p.church}" title="${ch[0]}">${ic(ch[1], 'fill')}</span>` : ''}
-      ${fmAv(p)}<span class="fm-nm">${esc(fmShort(p))}</span></button>`;
+      ${fmAv(p)}<span class="fm-nm">${p.dead ? `<span class="fm-dead" title="Falleció${p.died ? ' en ' + esc(p.died) : ''}">${ic('cross')}</span> ` : ''}${esc(fmShort(p))}</span></button>`;
   };
   return { W, H, html: `<svg width="${W}" height="${H}"><g transform="translate(${ox},${oy})">${lines.map(l => `<path class="fm-line ${l.cls}" d="${l.d}"/>`).join('')}</g></svg>${cards.map(card).join('')}` };
 }
@@ -4907,7 +4911,7 @@ function fmKinship(a, b) {
   const couples = route.slice(1).filter(r => r.step === 'S').map((r, i) => fmLinked(route[route.indexOf(r) - 1].id, r.id));
   const ex = couples.some(fmEnded) ? 'ex ' : '';
   const direct = {   // afinidad: nombres propios para caminos cortos
-    S: () => { const st = FM_COUPLE[couples[0]?.status] || FM_COUPLE.casados; return st === FM_COUPLE.separados ? 'ex pareja' : w(st[1], st[2]); },
+    S: () => { const st = FM_COUPLE[couples[0]?.status] || FM_COUPLE.casados; return st === FM_COUPLE.separados ? 'ex pareja' : st === FM_COUPLE.casados && fmP(b).dead ? w('viudo', 'viuda') : w(st[1], st[2]); },
     F: () => fmFriendWord(fmLinked(a, b), sx),
     SU: () => ex + w('yerno', 'nuera'), DS: () => ex + w('suegro', 'suegra'),
     SUD: () => ex + w('cuñado', 'cuñada'), UDS: () => ex + w('cuñado', 'cuñada'), SUDS: () => ex + w('concuñado', 'concuñada'),
@@ -4928,7 +4932,7 @@ function fmKinship(a, b) {
     const from = route[i].id, s = route[i + 1].step;
     if (s === 'S' || s === 'F') {
       const p = fmP(from), k = fmLinked(from, route[i + 1].id), st = FM_COUPLE[k?.status] || FM_COUPLE.casados;
-      hops.push({ from, to: route[i + 1].id, word: s === 'F' ? fmFriendWord(k, p.sex) : st === FM_COUPLE.separados ? 'ex pareja' : fmG(p.sex, st[1], st[2]) });
+      hops.push({ from, to: route[i + 1].id, word: s === 'F' ? fmFriendWord(k, p.sex) : st === FM_COUPLE.separados ? 'ex pareja' : st === FM_COUPLE.casados && fmP(route[i + 1].id).dead ? fmG(p.sex, 'viudo', 'viuda') : fmG(p.sex, st[1], st[2]) });
       i++; continue;
     }
     let g = 0, h = 0, j = i;
@@ -4969,7 +4973,7 @@ function fmListHtml() {
       <div class="card-h"><h2>Familia ${esc(f)}</h2><span class="badge">${ps.length}</span></div>
       <ul class="list plain">${ps.map(p => { const ch = FM_CHURCH[p.church]; return `<li class="fm-row" data-id="${p.id}"><button class="fm-row-b" data-act="fmEdit" data-id="${p.id}" style="--fc:${fmColor(p)}">${fmAv(p)}
         <span class="fm-row-t"><strong>${esc(fmFull(p))}${p.id === S.meId ? ' <small>(yo)</small>' : ''}</strong>
-        <span class="td-m">${ch ? `<span>${ic(ch[1])} ${ch[0]}${p.from || p.to ? ` · ${[p.from, p.church === 'antes' ? p.to : ''].filter(Boolean).join('–')}` : ''}</span>` : ''}${p.mins?.length ? `<span>${esc(fmMinText(p))}</span>` : ''}</span></span></button>
+        <span class="td-m">${ch ? `<span>${ic(ch[1])} ${ch[0]}${p.from || p.to ? ` · ${[p.from, p.church === 'antes' ? p.to : ''].filter(Boolean).join('–')}` : ''}</span>` : ''}${p.mins?.length ? `<span>${esc(fmMinText(p))}</span>` : ''}${p.dead ? `<span>${ic('cross')} Falleció${p.died ? ' en ' + esc(p.died) : ''}</span>` : ''}</span></span></button>
         <button class="icon-btn" data-act="fmTreeOf" data-id="${p.id}" title="Ver su árbol" aria-label="Ver su árbol">${ic('tree')}</button></li>`; }).join('')}</ul></section>`).join('')
       : `<div class="card">${empty(S.people.length ? 'Nadie coincide con la búsqueda' : 'Todavía no hay personas', 'users-three')}</div>`}`;
 }
@@ -5033,7 +5037,7 @@ function fmMinsFrom(fd) {
   S.ministries.forEach(m => { if (!vals.includes(m.id)) return; out.push(m.id); m.subs.forEach(sb => vals.includes(sb.id) && out.push(sb.id)); });
   return [...new Set(out)];
 }
-const FM_BLANK = () => ({ name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', mins: [], notes: '' });
+const FM_BLANK = () => ({ name: '', last1: '', last2: '', sex: '', dead: false, died: '', photo: null, church: '', from: '', to: '', mins: [], notes: '' });
 function fmFieldsHtml(x, req = true) {
   const yr = (n, v, l) => `<label class="fld"><span>${l}</span><input name="${n}" inputmode="numeric" maxlength="4" value="${esc(v)}" placeholder="Año"></label>`;
   return `
@@ -5043,6 +5047,8 @@ function fmFieldsHtml(x, req = true) {
     <div class="row2"><label class="fld"><span>Primer apellido</span><input name="last1" maxlength="60" value="${esc(x.last1)}"></label>
       <label class="fld"><span>Segundo apellido</span><input name="last2" maxlength="60" value="${esc(x.last2)}"></label></div>
     <label class="fld"><span>Es</span><select name="sex"><option value="">Sin indicar</option><option value="f" ${x.sex === 'f' ? 'selected' : ''}>Mujer</option><option value="m" ${x.sex === 'm' ? 'selected' : ''}>Hombre</option></select></label>
+    <div class="fm-dead-f"><label class="toggle"><input type="checkbox" name="dead" ${x.dead ? 'checked' : ''}> <span>Falleció</span></label>
+      <label class="fld" data-died ${x.dead ? '' : 'hidden'}><span>Año</span><input name="died" inputmode="numeric" maxlength="4" value="${esc(x.died || '')}" placeholder="Año"></label></div>
     <h3 class="sub-h">Iglesia</h3>
     <label class="fld"><span>Situación</span><select name="church"><option value="">Sin indicar</option>${Object.entries(FM_CHURCH).map(([k, [l]]) => `<option value="${k}" ${x.church === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <div class="row2">${yr('from', x.from, 'Desde')}${yr('to', x.to, 'Hasta (si ya no está)')}</div>
@@ -5052,13 +5058,15 @@ function fmFieldsHtml(x, req = true) {
 }
 function fmFieldsData(fd, photo) {
   return { name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'), photo,
-    church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), mins: fmMinsFrom(fd), notes: fd.get('notes').trim() };
+    church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), mins: fmMinsFrom(fd), notes: fd.get('notes').trim(), dead: fd.get('dead') === 'on', died: fd.get('dead') === 'on' ? fd.get('died').trim() : '' };
 }
 function fmFieldsBind(f, ph) {
   const pv = $('[data-pv]', f), no = $('[data-nophoto]', f), pick = $('[data-photo]', f);
   const paint = () => { pv.innerHTML = fmAv({ name: f.elements.name.value || '?', last1: f.elements.last1.value, photo: ph.id }); no.hidden = !ph.id; pick.lastChild.textContent = ` ${ph.id ? 'Cambiar' : 'Subir'} foto`; };
   pick.onclick = async () => { const [id] = await pickImage(false, 480); if (id) { ph.id = id; paint(); } };
   no.onclick = () => { ph.id = null; paint(); };
+  const dead = f.elements.dead, died = $('[data-died]', f);
+  dead.onchange = () => { died.hidden = !dead.checked; };
   const box = $('[data-mins]', f), inp = $('[data-min-new]', f);
   const subs = cb => { const el = $(`[data-sub-of="${cb.value}"]`, f); if (el) el.hidden = !cb.checked; };
   box.onchange = e => subs(e.target);
