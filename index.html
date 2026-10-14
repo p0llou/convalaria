@@ -27,6 +27,11 @@
     h.dataset.mode = d ? 'dark' : 'light';
     if (s.theme) h.dataset.theme = s.theme;
   } catch (e) {}
+  // Bloqueo: oculta todo antes de pintar, salvo que se haya usado hace menos del tiempo elegido (misma pestaña)
+  try {
+    const c = JSON.parse(localStorage.getItem('convalaria-lock') || 'null'), t = Number(sessionStorage.getItem('convalaria-active')) || 0;
+    if (c && !(c.after > 0 && Date.now() - t < c.after * 60000)) document.documentElement.classList.add('locked');
+  } catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -734,6 +739,17 @@
   .bd-near { color: var(--accent-strong); font-size: 16px; }
   .pr strong { font-variant-numeric: tabular-nums; }
 
+  /* Bloqueo */
+  .lock { display: none; }
+  html.locked .lock { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px 16px; overflow-y: auto; background-color: var(--bg); }
+  html.locked .app, html.locked #bgPhoto, html.locked #toasts, html.locked dialog { visibility: hidden; }
+  .lock-box { width: min(340px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 32px 24px; border-radius: var(--radius); background: var(--surface-solid); box-shadow: var(--shadow); }
+  .lock-box h1 { margin: 0; font-family: var(--font-display); font-size: 30px; }
+  .lock-box .hint { margin: 0; }
+  .lock-in { text-align: center; font-size: 22px; letter-spacing: .3em; }
+  .lock-box .btn-primary { width: 100%; justify-content: center; }
+  .lock-err { min-height: 1.2em; margin: 0; color: var(--danger); font-weight: 700; font-size: 14px; }
+
   /* Tareas */
   .td-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
   .rem-form .td-date { flex: 0 0 auto; }
@@ -1125,7 +1141,9 @@ function normalize(raw) {
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
+let lockWiping = false;   // "Olvidé mi clave": nada vuelve a escribir mientras se borra
 function saveLocal() {
+  if (lockWiping) return;
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch { toast({ title: 'No se pudo guardar', text: 'El navegador no tiene espacio o bloquea el guardado.', icon: 'warning' }); }
 }
@@ -1626,6 +1644,7 @@ function updateTickers() {
 
 let tickN = 0, lastDay = ymd(new Date());
 function tick() {
+  lockTick();
   const now = Date.now(), p = S.pomo;
   if (p.endAt && now >= p.endAt) {
     const was = p.mode;
@@ -2094,6 +2113,7 @@ function renderDecorar(root) {
           : 'Usa el menú del navegador y elige “Instalar app” o “Agregar a la pantalla de inicio”.'}</p>
         ${installPrompt && !isStandalone() ? `<button class="btn btn-primary" data-act="install">${ic('download-simple')} Instalar app</button>` : ''}</div></section>
       <section class="card span-12" data-sync-card>${syncCardHtml()}</section>
+      <section class="card span-6">${lockCardHtml()}</section>
       <section class="card span-6"><h2>Respaldo</h2>
         <p class="hint" style="margin-top:8px">Tus datos viven solo en este navegador. Descarga una copia de vez en cuando.</p>
         <div class="btns"><button class="btn btn-primary" data-act="export">Descargar copia</button><button class="btn" data-act="import">Restaurar copia</button></div></section>
@@ -4822,7 +4842,7 @@ if (!syncMeta.device) syncMeta.device = uid();
 if (!syncMeta.dirty) syncMeta.dirty = {};
 let fb = null, syncUser = null, syncUnsub = null, syncState = 'idle', syncErr = '', pushTimer = null, pushing = false, pushAgain = false, needRender = false, remoteReady = false;
 const pendingDocs = new Map();
-const saveMeta = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch {} };
+const saveMeta = () => { if (lockWiping) return; try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch {} };
 const fnv = str => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length; };
 const syncBusy = () => modal.open || $('#present').open || $('#practice').open || mmEditing;
 const FB_ERRORS = {
@@ -5340,11 +5360,168 @@ ACT.install = async () => {
 };
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+/* ---------- Bloqueo con PIN o contraseña ---------- */
+// Solo en este dispositivo: localStorage['convalaria-lock'] = { kind: pin|pass, salt, hash (PBKDF2-SHA256), iter, after (minutos sin uso; 0 = al salir) }.
+// Protege ante quien tome el equipo: los datos no se cifran. No se sincroniza ni va en los respaldos.
+// sessionStorage['convalaria-active'] = último uso (el <script> de <head> decide si arrancar bloqueada).
+const LOCK_KEY = 'convalaria-lock', LOCK_ACTIVE = 'convalaria-active', LOCK_FAILS = 'convalaria-lock-fails';
+const LOCK_AFTER = [[0, 'Al salir de la app'], [1, 'Tras 1 minuto sin uso'], [5, 'Tras 5 minutos sin uso'], [15, 'Tras 15 minutos sin uso'], [60, 'Tras 1 hora sin uso']];
+const lockRead = () => { try { return JSON.parse(localStorage.getItem(LOCK_KEY)); } catch { return null; } };
+let lockConf = lockRead(), lockActiveAt = Date.now(), lockResolve = null;
+const isLocked = () => document.documentElement.classList.contains('locked');
+const lockCan = () => !!window.crypto?.subtle;
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+async function lockHash(secret, salt, iter) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveBits']);
+  return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: Uint8Array.from(atob(salt), c => c.charCodeAt(0)), iterations: iter }, key, 256));
+}
+const lockCheck = async secret => !!lockConf && await lockHash(secret, lockConf.salt, lockConf.iter) === lockConf.hash;
+async function lockStore(kind, secret, after) {
+  const salt = b64(crypto.getRandomValues(new Uint8Array(16))), iter = 150000;
+  lockConf = { kind, salt, iter, hash: await lockHash(secret, salt, iter), after };
+  localStorage.setItem(LOCK_KEY, JSON.stringify(lockConf));
+  lockTouch(true);
+}
+function lockTouch(force) {
+  const now = Date.now();
+  if (!force && now - lockActiveAt < 5000) return;
+  lockActiveAt = now;
+  try { sessionStorage.setItem(LOCK_ACTIVE, now); } catch {}
+}
+// Intentos fallidos: desde el 5.º, espera creciente (30 s, 1 min, 2 min… hasta 15 min)
+const lockFails = () => { try { return JSON.parse(localStorage.getItem(LOCK_FAILS)) || { n: 0, until: 0 }; } catch { return { n: 0, until: 0 }; } };
+const lockWait = () => Math.max(0, Math.ceil((lockFails().until - Date.now()) / 1000));
+const lockEl = document.createElement('div');
+lockEl.id = 'lock'; lockEl.className = 'lock';
+document.body.prepend(lockEl);
+function lockRender(msg = '') {
+  if (!lockConf) return;
+  const pin = lockConf.kind === 'pin', wait = lockWait(), what = pin ? 'PIN' : 'contraseña';
+  lockEl.innerHTML = `<form class="lock-box" autocomplete="off">
+    <img src="icons/logo.svg" alt="" width="72" height="72">
+    <h1>Convalaria</h1>
+    <p class="hint">${wait ? `Demasiados intentos. Espera ${wait} s.` : `Ingresa tu ${what}`}</p>
+    <input class="inp lock-in" type="password" name="secret" ${pin ? 'inputmode="numeric" maxlength="12"' : 'maxlength="64"'} autocomplete="current-password" aria-label="${cap(what)}" ${wait ? 'disabled' : ''}>
+    <button class="btn btn-primary" ${wait ? 'disabled' : ''}>${ic('lock-open')} Entrar</button>
+    <p class="lock-err" role="alert">${esc(msg)}</p>
+    <button type="button" class="linkish" data-forgot>¿Olvidaste tu ${what}?</button></form>`;
+  const f = $('form', lockEl), inp = f.elements.secret;
+  if (wait) setTimeout(() => isLocked() && lockRender(), wait * 1000);
+  else setTimeout(() => inp.focus(), 30);
+  f.onsubmit = async e => {
+    e.preventDefault();
+    if (lockWait() || !inp.value) return;
+    if (await lockCheck(inp.value)) { localStorage.removeItem(LOCK_FAILS); unlock(); return; }
+    const x = lockFails(); x.n++;
+    if (x.n >= 5) x.until = Date.now() + Math.min(900, 30 * 2 ** (x.n - 5)) * 1000;
+    localStorage.setItem(LOCK_FAILS, JSON.stringify(x));
+    lockRender(`${cap(what)} incorrect${pin ? 'o' : 'a'}`);
+  };
+  $('[data-forgot]', f).onclick = () => {
+    if (!confirm(`Por seguridad, ${pin ? 'el PIN' : 'la contraseña'} no se puede recuperar.\n\nPuedes borrar todo lo guardado en este dispositivo y empezar de cero. Si usas Sincronización, al volver a iniciar sesión recuperas tus datos de la nube. Sin sincronización, lo que no esté en una copia se pierde.\n\n¿Borrar todo en este dispositivo?`)) return;
+    if (confirm('¿Segura? Esto no se puede deshacer.')) lockWipe();
+  };
+}
+async function lockWipe() {
+  lockWiping = true;
+  try { localStorage.clear(); sessionStorage.clear(); } catch {}
+  // Fotos y sesión de Firebase (si no, la sesión seguiría abierta y bajaría los datos sin pedir clave)
+  await Promise.all(['mi-espacio-fotos', 'firebaseLocalStorageDb'].map(n => new Promise(r => {
+    try { const q = indexedDB.deleteDatabase(n); q.onsuccess = q.onerror = q.onblocked = r; } catch { r(); }
+  })));
+  location.reload();
+}
+function lockNow() {
+  if (!lockConf || isLocked()) return;
+  $$('dialog[open]').forEach(d => d.close());
+  document.documentElement.classList.add('locked');
+  $('.app').inert = true;
+  lockRender();
+}
+function unlock() {
+  document.documentElement.classList.remove('locked');
+  $('.app').inert = false;
+  lockEl.innerHTML = '';
+  lockTouch(true);
+  if (lockResolve) { lockResolve(); lockResolve = null; }
+}
+// Espera la clave antes del primer render (init)
+const lockGate = () => isLocked() && lockConf ? new Promise(r => { lockResolve = r; $('.app').inert = true; lockRender(); }) : (document.documentElement.classList.remove('locked'), Promise.resolve());
+function lockTick() {
+  if (lockConf && !isLocked() && lockConf.after > 0 && Date.now() - lockActiveAt > lockConf.after * 60000) lockNow();
+}
+['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(t => addEventListener(t, () => { if (!isLocked()) lockTouch(); }, { capture: true, passive: true }));
+// Bloqueada: ningún atajo de teclado (Ctrl+K, /) llega a la app
+addEventListener('keydown', e => { if (isLocked() && !e.target.closest?.('#lock')) e.stopImmediatePropagation(); }, true);
+document.addEventListener('visibilitychange', () => {
+  if (!lockConf) return;
+  if (document.hidden && lockConf.after === 0) lockNow();
+  else if (!document.hidden) lockTick();
+});
+function lockCardHtml() {
+  const c = lockConf;
+  return `<h2>${ic('lock-simple', 'duotone')} Bloqueo</h2>
+    <p class="hint" style="margin-top:8px">${c ? `Activado en este dispositivo con ${c.kind === 'pin' ? 'PIN' : 'contraseña'}.` : 'Pide un PIN o contraseña para abrir Convalaria en este dispositivo.'} Cada dispositivo tiene su propio bloqueo.</p>
+    ${!lockCan() ? '<p class="hint">Disponible solo al abrirla desde su dirección web (https).</p>'
+      : c ? `<label class="fld"><span>Bloquear</span><select data-chg="lockAfter">${LOCK_AFTER.map(([v, l]) => `<option value="${v}" ${v === c.after ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <div class="btns"><button class="btn btn-primary" data-act="lockNow">${ic('lock-simple')} Bloquear ahora</button><button class="btn" data-act="lockSet">Cambiar clave</button><button class="btn btn-danger" data-act="lockOff">Quitar</button></div>`
+      : `<div class="btns"><button class="btn btn-primary" data-act="lockSet">${ic('lock-simple')} Activar bloqueo</button></div>`}`;
+}
+function lockSetModal() {
+  const c = lockConf;
+  openModal(c ? 'Cambiar clave' : 'Activar bloqueo', `
+    ${c ? `<label class="fld"><span>${c.kind === 'pin' ? 'PIN' : 'Contraseña'} actual</span><input type="password" name="cur" required autocomplete="current-password" ${c.kind === 'pin' ? 'inputmode="numeric"' : ''}></label>` : ''}
+    <label class="fld"><span>Tipo</span><select name="kind"><option value="pin" ${c?.kind !== 'pass' ? 'selected' : ''}>PIN (solo números, 4 a 12)</option><option value="pass" ${c?.kind === 'pass' ? 'selected' : ''}>Contraseña (6 o más caracteres)</option></select></label>
+    <div class="row2">
+      <label class="fld"><span>Nueva clave</span><input type="password" name="secret" required maxlength="64" autocomplete="new-password"></label>
+      <label class="fld"><span>Repítela</span><input type="password" name="again" required maxlength="64" autocomplete="new-password"></label>
+    </div>
+    ${c ? '' : `<label class="fld"><span>Bloquear</span><select name="after">${LOCK_AFTER.map(([v, l]) => `<option value="${v}" ${v === 5 ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}
+    <p class="hint">No se puede recuperar: si la olvidas, la única salida es borrar los datos de este dispositivo (con Sincronización se recuperan desde la nube).</p>`, {
+    saveLabel: c ? 'Cambiar' : 'Activar',
+    onSave: fd => {
+      const kind = fd.get('kind'), secret = fd.get('secret');
+      if (kind === 'pin' && !/^\d{4,12}$/.test(secret)) return 'El PIN debe tener entre 4 y 12 números.';
+      if (kind === 'pass' && secret.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+      if (secret !== fd.get('again')) return 'Las claves no coinciden.';
+      const after = c ? c.after : Number(fd.get('after'));
+      (async () => {
+        if (c && !(await lockCheck(fd.get('cur')))) { toast({ title: 'Clave actual incorrecta', text: 'No se cambió nada.', icon: 'warning' }); return; }
+        await lockStore(kind, secret, after);
+        toast({ title: c ? 'Clave cambiada' : 'Bloqueo activado', text: c ? '' : 'Convalaria pedirá tu clave en este dispositivo.', icon: 'lock-simple' });
+        renderAll();
+      })();
+    },
+    onOpen: f => {
+      const k = f.elements.kind, set = () => ['secret', 'again'].forEach(n => { f.elements[n].inputMode = k.value === 'pin' ? 'numeric' : 'text'; });
+      k.onchange = set; set();
+    },
+  });
+}
+Object.assign(ACT, {
+  lockSet: () => lockSetModal(),
+  lockNow: () => lockNow(),
+  lockOff: () => openModal('Quitar bloqueo', `<label class="fld"><span>${lockConf.kind === 'pin' ? 'PIN' : 'Contraseña'} actual</span><input type="password" name="cur" required autocomplete="current-password" ${lockConf.kind === 'pin' ? 'inputmode="numeric"' : ''}></label>`, {
+    saveLabel: 'Quitar',
+    onSave: fd => {
+      (async () => {
+        if (!(await lockCheck(fd.get('cur')))) { toast({ title: 'Clave incorrecta', text: 'El bloqueo sigue activo.', icon: 'warning' }); return; }
+        localStorage.removeItem(LOCK_KEY); lockConf = null;
+        toast({ title: 'Bloqueo quitado', icon: 'lock-open' }); renderAll();
+      })();
+    },
+  }),
+});
+Object.assign(CHG, {
+  lockAfter: el => { lockConf.after = Number(el.value); localStorage.setItem(LOCK_KEY, JSON.stringify(lockConf)); lockTouch(true); },
+});
+
 /* ---------- Inicio ---------- */
 (async function init() {
   applyDecor();
   await Promise.all(allImgIds().map(id => imgStore.get(id)));
   applyDecor();
+  await lockGate();
   go(current);
   tick();
   setInterval(tick, 200);
