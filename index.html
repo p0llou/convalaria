@@ -830,6 +830,73 @@
     .bx-art.lg { width: 96px; }
   }
 
+  /* Familias */
+  .fm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; }
+  .fm-focus { display: flex; align-items: center; gap: 10px; flex: 1 1 260px; min-width: 0; }
+  .fm-focus .fm-av { width: 42px; height: 42px; font-size: 15px; }
+  .fm-zoom { display: inline-flex; margin-left: auto; }
+  .fm-wrap { position: relative; height: calc(100vh - 290px); height: calc(100dvh - 290px); min-height: 400px; overflow: auto; border-radius: 20px; border: 1px solid var(--line); outline: none; cursor: grab; touch-action: none;
+    background-color: var(--accent-softer); background-image: radial-gradient(var(--line) 1.2px, transparent 1.6px); background-size: 22px 22px; }
+  .fm-wrap.panning { cursor: grabbing; }
+  .fm-wrap:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); }
+  .fm-stage { position: relative; }
+  .fm-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  .fm-inner svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  .fm-line { fill: none; stroke: var(--muted); stroke-width: 2; opacity: .55; }
+  .fm-line.couple { stroke: var(--accent-strong); stroke-width: 3; opacity: .85; }
+  .fm-line.ended { stroke-dasharray: 7 6; }
+  .fm-line.friend { stroke-dasharray: 2 6; stroke-linecap: round; opacity: .7; }
+  .fm-line.hl { stroke: var(--accent-strong); stroke-width: 4; opacity: 1; }
+  .fm-dim .fm-line:not(.hl) { opacity: .1; }
+  .fm-dim .fn:not(.hl) { opacity: .22; }
+  .fm-av { width: 56px; height: 56px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; font-weight: 800; font-size: 18px; color: var(--ink);
+    background: color-mix(in srgb, var(--fc, var(--accent)) 22%, var(--surface-solid)); }
+  .fm-av img { width: 100%; height: 100%; object-fit: cover; }
+  .fm-card { position: absolute; width: 124px; height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 8px; font: inherit; color: var(--ink); text-align: center;
+    border-radius: 16px; background: var(--surface-solid); border: 2px solid color-mix(in srgb, var(--fc) 40%, var(--surface-solid)); box-shadow: 0 6px 16px -10px rgba(0,0,0,.3); cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .fm-card.focus { border-color: var(--fc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--fc) 25%, transparent), 0 10px 22px -10px rgba(0,0,0,.35); }
+  .fm-nm { font-weight: 700; font-size: 13.5px; line-height: 1.2; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fm-tag, .fm-me { position: absolute; top: 7px; font-size: 15px; color: var(--accent-strong); }
+  .fm-tag { right: 8px; }
+  .fm-tag.antes { color: var(--muted); }
+  .fm-me { left: 8px; }
+  .fn { position: absolute; transform: translate(-50%, -50%); width: 100px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .fn .fm-av { width: 48px; height: 48px; font-size: 15px; border: 3px solid var(--fc); box-shadow: 0 4px 10px -6px rgba(0,0,0,.4); }
+  .fn.sel .fm-av { box-shadow: 0 0 0 5px color-mix(in srgb, var(--fc) 35%, transparent); }
+  .fn-nm { max-width: 100%; padding: 1px 5px; border-radius: 6px; font-size: 12px; font-weight: 700; line-height: 1.2; text-align: center; overflow-wrap: anywhere; background: color-mix(in srgb, var(--surface-solid) 85%, transparent); }
+  .fm-legend { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; }
+  .fm-chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .fm-chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--fc); }
+  .fm-chip small { color: var(--muted); }
+  .fm-chip.on { border-color: var(--fc); box-shadow: inset 0 0 0 1px var(--fc); }
+  .fm-church { width: auto; padding: 6px 10px; }
+  .fm-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; }
+  .fm-key span { display: inline-block; width: 22px; margin-left: 6px; border-top: 2px solid var(--muted); }
+  .fm-key .k-c { border-top: 3px solid var(--accent-strong); }
+  .fm-key .k-f { border-top-style: dotted; }
+  .fm-selcard { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+  .fm-selcard > div:not(.btns) { flex: 1 1 160px; min-width: 0; }
+  .fm-selcard .btns { margin: 0; }
+  .fm-answer { font-size: 19px; line-height: 1.45; margin: 16px 0 12px; }
+  .fm-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .fm-mini { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--fc) 45%, var(--surface-solid)); background: var(--surface-solid); font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
+  .fm-mini .fm-av { width: 32px; height: 32px; font-size: 12px; }
+  .fm-arrow { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; font-weight: 700; }
+  .fm-fam { margin-bottom: 14px; border-top: 4px solid var(--fc); }
+  .fm-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px dashed var(--line); }
+  .fm-row:last-child { border-bottom: 0; }
+  .fm-row-b { all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 2px; border-radius: 8px; }
+  .fm-row-b:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .fm-row-b .fm-av { width: 42px; height: 42px; font-size: 14px; }
+  .fm-row-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .fm-row-t strong { overflow-wrap: anywhere; }
+  .fm-photo { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .fm-photo-pv .fm-av { width: 72px; height: 72px; font-size: 22px; }
+  .fm-rels small { color: var(--muted); font-weight: 700; margin-right: 4px; }
+  @media (max-width: 760px) {
+    .fm-wrap { height: calc(100dvh - 340px); min-height: 340px; }
+  }
+
   /* Ayudas de memoria */
   .ay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ay-boards { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 auto; }
@@ -983,6 +1050,7 @@
     <button class="nav-btn" data-act="go" data-view="premios"><span class="ic"><i class="ph-duotone ph-trophy" aria-hidden="true"></i></span><span>Plan de premios</span></button>
     <button class="nav-btn" data-act="go" data-view="versiculos"><span class="ic"><i class="ph-duotone ph-cards" aria-hidden="true"></i></span><span>Versículos</span></button>
     <button class="nav-btn" data-act="go" data-view="cumples"><span class="ic"><i class="ph-duotone ph-cake" aria-hidden="true"></i></span><span>Cumpleaños</span></button>
+    <button class="nav-btn" data-act="go" data-view="familias"><span class="ic"><i class="ph-duotone ph-tree" aria-hidden="true"></i></span><span>Familias</span></button>
     <div class="nav-g">Herramientas</div>
     <button class="nav-btn" data-act="go" data-view="ideas"><span class="ic"><i class="ph-duotone ph-brain" aria-hidden="true"></i></span><span>Mapa mental</span></button>
     <button class="nav-btn" data-act="go" data-view="lugares"><span class="ic"><i class="ph-duotone ph-map-trifold" aria-hidden="true"></i></span><span>Lugares</span></button>
@@ -1008,6 +1076,7 @@
     <section class="view" id="view-premios" hidden></section>
     <section class="view" id="view-versiculos" hidden></section>
     <section class="view" id="view-cumples" hidden></section>
+    <section class="view" id="view-familias" hidden></section>
     <section class="view" id="view-ideas" hidden></section>
     <section class="view" id="view-lugares" hidden></section>
     <section class="view" id="view-finanzas" hidden></section>
@@ -1118,6 +1187,7 @@ const defaults = () => ({
   memos: [], memoBoards: [], memoBoard: 'general', memoLayout: null,
   todos: [], todoLists: [], todoList: 'todas',
   media: [], mediaLog: [],
+  people: [], kin: [], meId: null, netPos: {},
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1133,8 +1203,9 @@ function normalize(raw) {
   if (!s.awards.tasks || typeof s.awards.tasks !== 'object' || Array.isArray(s.awards.tasks)) s.awards.tasks = {};
   delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
+  if (!s.netPos || typeof s.netPos !== 'object' || Array.isArray(s.netPos)) s.netPos = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog', 'people', 'kin'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
   s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
@@ -1199,7 +1270,7 @@ const imgStore = (() => {
     },
   };
 })();
-const allImgIds = () => [S.bannerId, S.bgId, ...S.board.filter(i => i.type === 'photo').map(i => i.imgId)].filter(Boolean);
+const allImgIds = () => [S.bannerId, S.bgId, ...S.board.filter(i => i.type === 'photo').map(i => i.imgId), ...S.people.map(p => p.photo)].filter(Boolean);
 
 function fileToDataUrl(file, max = 1400) {
   return new Promise((res, rej) => {
@@ -1216,14 +1287,14 @@ function fileToDataUrl(file, max = 1400) {
     img.src = url;
   });
 }
-function pickImage(multiple = false) {
+function pickImage(multiple = false, max = 1400) {
   return new Promise(res => {
     const inp = $('#filePick');
     inp.multiple = multiple; inp.value = '';
     inp.onchange = async () => {
       const out = [];
       for (const f of inp.files) {
-        try { const data = await fileToDataUrl(f); const id = uid(); await imgStore.put(id, data); out.push(id); }
+        try { const data = await fileToDataUrl(f, max); const id = uid(); await imgStore.put(id, data); out.push(id); }
         catch { toast({ title: 'No pude leer la foto', text: f.name, icon: 'warning' }); }
       }
       res(out);
@@ -3019,7 +3090,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora, familias: renderFamilias };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -4444,6 +4515,561 @@ Object.assign(CHG, {
   bxYear: el => { bxYear = Number(el.value); renderAll(); },
 });
 
+/* ---------- Familias (árbol y red de la comunidad) ---------- */
+// S.people = [{ id, name, last1, last2, sex: f|m|'', photo (imgId), church: hoy|antes|nunca|'', from, to (años), roles (ministerios), notes, created }]
+// S.kin = [{ id, a, b, type }]: parent (a es padre o madre de b) | couple (status: casados|pololos|separados) | friend
+// S.meId = la usuaria; S.netPos = { id: [x, y] } posiciones en la red (las nuevas se calculan solas; "Ordenar" recalcula todo)
+// Familia = primer apellido (color estable por apellido)
+const FM_CHURCH = { hoy: ['En la iglesia', 'church'], antes: ['Estuvo en la iglesia', 'clock-counter-clockwise'], nunca: ['No va a la iglesia', 'house'] };
+const FM_COUPLE = { casados: ['Casados', 'esposo', 'esposa'], pololos: ['Pololos', 'pololo', 'polola'], separados: ['Separados', 'ex pareja', 'ex pareja'] };
+const FM_COLORS = ['#cf5a8a', '#7d5fcf', '#d4724a', '#3a9674', '#4a84c4', '#a8770f', '#2f8f9d', '#8a6a4f'];
+const FM_CW = 124, FM_CH = 128, FM_HG = 22, FM_UG = 30, FM_VG = 64, FM_PAD = 80;
+let fmTab = 'arbol', fmFocus = null, fmSel = null, fmFam = null, fmPath = null, fmA = null, fmB = null, fmQuery = '', fmChurch = 'todos';
+const fmZoom = { arbol: 1, red: 1 };
+const fmP = id => findById(S.people, id);
+const fmFull = p => [p.name, p.last1, p.last2].filter(Boolean).join(' ');
+const fmShort = p => [p.name.trim().split(/\s+/)[0], p.last1].filter(Boolean).join(' ');
+const fmFamKey = p => sNorm(p.last1 || '').trim();
+const fmColor = p => { const k = fmFamKey(p); return k ? FM_COLORS[[...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % FM_COLORS.length] : '#977f8b'; };
+const fmAv = p => { const d = p.photo && IMG.get(p.photo); return `<span class="fm-av">${d ? `<img src="${d}" alt="">` : esc(((p.name[0] || '') + (p.last1?.[0] || '')).toUpperCase())}</span>`; };
+const fmG = (sex, m, f) => sex === 'f' ? f : sex === 'm' ? m : m === f ? m : f === m.replace(/o\b/g, 'a') ? m.replace(/o\b/g, 'o/a') : `${m} o ${f}`;
+const fmParents = id => S.kin.filter(k => k.type === 'parent' && k.b === id).map(k => k.a);
+const fmChildren = id => S.kin.filter(k => k.type === 'parent' && k.a === id).map(k => k.b);
+const fmCouples = id => S.kin.filter(k => k.type === 'couple' && (k.a === id || k.b === id));
+const fmPartners = id => fmCouples(id).map(k => k.a === id ? k.b : k.a);
+const fmFriends = id => S.kin.filter(k => k.type === 'friend' && (k.a === id || k.b === id)).map(k => k.a === id ? k.b : k.a);
+const fmSiblings = id => [...new Set(fmParents(id).flatMap(fmChildren))].filter(x => x !== id);
+const fmLinked = (a, b) => S.kin.find(k => (k.a === a && k.b === b) || (k.a === b && k.b === a));
+function fmIsAncestor(x, y) {   // ¿x es antepasado de y?
+  const seen = new Set(), st = [y];
+  while (st.length) { const c = st.pop(); for (const p of fmParents(c)) { if (p === x) return true; if (!seen.has(p)) { seen.add(p); st.push(p); } } }
+  return false;
+}
+const fmSorted = () => [...S.people].sort((a, b) => fmFull(a).localeCompare(fmFull(b), 'es'));
+const fmOptions = (sel, skip) => fmSorted().filter(p => p.id !== skip).map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(fmFull(p))}${p.id === S.meId ? ' (yo)' : ''}</option>`).join('');
+
+/* Árbol: antepasados hacia arriba y descendientes hacia abajo, ambos desde los padres de la persona elegida */
+function fmLayout(unit, kidsOf, depth, max) {
+  const kids = depth < max ? kidsOf(unit) : [];
+  const nodes = kids.map(k => fmLayout(k, kidsOf, depth + 1, max));
+  const self = unit.members.length * FM_CW + (unit.members.length - 1) * FM_HG;
+  const kw = nodes.reduce((n, k) => n + k.w, 0) + Math.max(0, nodes.length - 1) * FM_UG;
+  return { unit, kids: nodes, self, kw, w: Math.max(self, kw) };
+}
+function fmPlace(node, left, depth, dir, cards, lines) {
+  const top = depth * dir * (FM_CH + FM_VG), x0 = left + (node.w - node.self) / 2;
+  node.xs = node.unit.members.map((id, i) => x0 + i * (FM_CW + FM_HG));
+  node.top = top;
+  node.unit.members.forEach((id, i) => { if (!(node.unit.skipRoot && depth === 0)) cards.push({ id, x: node.xs[i], y: top }); });
+  node.unit.members.forEach((id, i) => {   // línea de pareja entre tarjetas vecinas
+    if (!i) return;
+    const k = fmLinked(node.unit.members[i - 1], id);
+    if (k?.type === 'couple') lines.push({ cls: 'couple' + (k.status === 'separados' ? ' ended' : ''), d: `M${node.xs[i - 1] + FM_CW},${top + FM_CH / 2} H${node.xs[i]}` });
+  });
+  let x = left + (node.w - node.kw) / 2;
+  node.kids.forEach(k => { fmPlace(k, x, depth + 1, dir, cards, lines); x += k.w + FM_UG; });
+  const cx = i => node.xs[i] + FM_CW / 2;
+  node.kids.forEach(k => {
+    const kx = k.xs.reduce((a, b) => a + b, 0) / k.xs.length + FM_CW / 2;
+    if (dir > 0) {   // de la pareja (o del padre/madre) al hijo
+      const ps = fmParents(k.unit.members[0]), idx = node.unit.members.map((m, i) => ps.includes(m) ? i : -1).filter(i => i >= 0);
+      const px = idx.length ? idx.reduce((a, i) => a + cx(i), 0) / idx.length : cx(0), py = idx.length > 1 ? top + FM_CH / 2 : top + FM_CH, my = top + FM_CH + FM_VG / 2;
+      lines.push({ cls: '', d: `M${px},${py} V${my} H${k.xs[0] + FM_CW / 2} V${k.top}` });
+    } else {   // de la tarjeta a sus padres (arriba)
+      const i = node.unit.members.indexOf(k.unit.of), my = top - FM_VG / 2, up = k.top + FM_CH;
+      lines.push({ cls: '', d: `M${cx(Math.max(0, i))},${top} V${my} H${kx} V${k.unit.members.length > 1 ? up - FM_CH / 2 : up}` });
+    }
+  });
+}
+function fmTree(focus) {
+  const ps = fmParents(focus);
+  const root = ps.length ? { members: ps, root: true } : { members: [focus, ...fmPartners(focus)] };
+  const downKids = u => (u.root ? [...new Set(u.members.flatMap(fmChildren))] : fmChildren(u.members[0])).map(c => ({ members: [c, ...fmPartners(c)] }));
+  const upKids = u => u.members.map(m => ({ members: fmParents(m), of: m })).filter(x => x.members.length);
+  const cards = [], lines = [];
+  const down = fmLayout(root, downKids, 0, ps.length ? 3 : 2);
+  fmPlace(down, -down.w / 2, 0, 1, cards, lines);
+  if (ps.length) {
+    const up = fmLayout({ ...root, skipRoot: true }, upKids, 0, 3);
+    fmPlace(up, -up.w / 2, 0, -1, cards, lines);
+  }
+  return { cards, lines };
+}
+function fmTreeHtml() {
+  const f = fmP(fmFocus);
+  const { cards, lines } = fmTree(f.id);
+  const minX = Math.min(...cards.map(c => c.x)), minY = Math.min(...cards.map(c => c.y));
+  const W = Math.max(...cards.map(c => c.x)) - minX + FM_CW + FM_PAD * 2, H = Math.max(...cards.map(c => c.y)) - minY + FM_CH + FM_PAD * 2;
+  const ox = FM_PAD - minX, oy = FM_PAD - minY;
+  const card = c => {
+    const p = fmP(c.id), ch = FM_CHURCH[p.church];
+    return `<button class="fm-card ${c.id === f.id ? 'focus' : ''}" data-fm="${c.id}" style="left:${c.x + ox}px;top:${c.y + oy}px;--fc:${fmColor(p)}" title="${esc(fmFull(p))}">
+      ${p.id === S.meId ? `<span class="fm-me" title="Tú">${ic('heart', 'fill')}</span>` : ''}${ch && p.church !== 'nunca' ? `<span class="fm-tag ${p.church}" title="${ch[0]}">${ic(ch[1], 'fill')}</span>` : ''}
+      ${fmAv(p)}<span class="fm-nm">${esc(fmShort(p))}</span></button>`;
+  };
+  return { W, H, html: `<svg width="${W}" height="${H}"><g transform="translate(${ox},${oy})">${lines.map(l => `<path class="fm-line ${l.cls}" d="${l.d}"/>`).join('')}</g></svg>${cards.map(card).join('')}` };
+}
+
+/* Red: fuerzas simples (repulsión, resortes por vínculo, atracción por familia y al centro) */
+function fmSimulate(free, iters) {
+  const P = S.netPos, ids = S.people.map(p => p.id), freeSet = new Set(free);
+  const L = { parent: 120, couple: 70, friend: 190 };
+  const fam = {}; S.people.forEach(p => { const k = fmFamKey(p); if (k) (fam[k] ||= []).push(p.id); });
+  for (let it = 0; it < iters; it++) {
+    const t = 40 * (1 - it / iters) + 2, disp = {};
+    ids.forEach(i => disp[i] = [0, 0]);
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      const a = P[ids[i]], b = P[ids[j]];
+      let dx = a[0] - b[0], dy = a[1] - b[1], d = Math.hypot(dx, dy);
+      if (d < 0.01) { dx = Math.random() - .5; dy = Math.random() - .5; d = 0.5; }
+      if (d > 500) continue;
+      const f = 5200 / d;
+      disp[ids[i]][0] += dx / d * f; disp[ids[i]][1] += dy / d * f;
+      disp[ids[j]][0] -= dx / d * f; disp[ids[j]][1] -= dy / d * f;
+    }
+    S.kin.forEach(k => {
+      const a = P[k.a], b = P[k.b];
+      if (!a || !b) return;
+      const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.max(1, Math.hypot(dx, dy)), f = (d - L[k.type]) * 0.5;
+      disp[k.a][0] += dx / d * f; disp[k.a][1] += dy / d * f;
+      disp[k.b][0] -= dx / d * f; disp[k.b][1] -= dy / d * f;
+    });
+    Object.values(fam).forEach(m => {
+      if (m.length < 2) return;
+      const cx = m.reduce((n, i) => n + P[i][0], 0) / m.length, cy = m.reduce((n, i) => n + P[i][1], 0) / m.length;
+      m.forEach(i => { disp[i][0] += (cx - P[i][0]) * 0.06; disp[i][1] += (cy - P[i][1]) * 0.06; });
+    });
+    free.forEach(i => {
+      const p = P[i], d = disp[i];
+      d[0] -= p[0] * 0.02; d[1] -= p[1] * 0.02;
+      const m = Math.hypot(d[0], d[1]) || 1, s = Math.min(m, t) / m;
+      p[0] += d[0] * s; p[1] += d[1] * s;
+    });
+  }
+  ids.forEach(i => { if (freeSet.has(i)) P[i] = P[i].map(Math.round); });
+}
+function fmNetEnsure(all = false) {
+  if (all) S.netPos = {};
+  const P = S.netPos, missing = S.people.filter(p => !P[p.id]).map(p => p.id);
+  if (!missing.length) return;
+  const placed = new Set(Object.keys(P));
+  missing.forEach((id, n) => {   // cerca de sus vínculos ya ubicados, o en espiral
+    const near = S.kin.filter(k => k.a === id || k.b === id).map(k => k.a === id ? k.b : k.a).filter(x => placed.has(x)).map(x => P[x]);
+    const a = n * 2.4, r = 60 + n * 14;
+    P[id] = near.length ? [near.reduce((s, q) => s + q[0], 0) / near.length + rand(-40, 40), near.reduce((s, q) => s + q[1], 0) / near.length + rand(-40, 40)] : [Math.cos(a) * r, Math.sin(a) * r];
+    placed.add(id);
+  });
+  fmSimulate(missing, missing.length === S.people.length ? 400 : 160);
+  save();
+}
+function fmHighlight() {   // { nodes, edges } a destacar, o null
+  if (fmPath?.length) {
+    const e = new Set();
+    for (let i = 1; i < fmPath.length; i++) { const k = fmLinked(fmPath[i - 1], fmPath[i]); if (k) e.add(k.id); }
+    return { nodes: new Set(fmPath), edges: e };
+  }
+  if (fmSel && fmP(fmSel)) {
+    const ks = S.kin.filter(k => k.a === fmSel || k.b === fmSel);
+    return { nodes: new Set([fmSel, ...ks.map(k => k.a), ...ks.map(k => k.b)]), edges: new Set(ks.map(k => k.id)) };
+  }
+  if (fmFam) {
+    const n = new Set(S.people.filter(p => fmFamKey(p) === fmFam).map(p => p.id));
+    return { nodes: n, edges: new Set(S.kin.filter(k => n.has(k.a) && n.has(k.b)).map(k => k.id)) };
+  }
+  if (fmChurch !== 'todos') return { nodes: new Set(S.people.filter(p => p.church === fmChurch).map(p => p.id)), edges: new Set() };
+  return null;
+}
+function fmNetHtml() {
+  fmNetEnsure();
+  const P = S.netPos, xs = S.people.map(p => P[p.id][0]), ys = S.people.map(p => P[p.id][1]);
+  const ox = FM_PAD + 60 - Math.min(...xs), oy = FM_PAD + 40 - Math.min(...ys);
+  const W = Math.max(...xs) - Math.min(...xs) + (FM_PAD + 60) * 2, H = Math.max(...ys) - Math.min(...ys) + (FM_PAD + 40) * 2 + 30;
+  const hl = fmHighlight();
+  const edge = k => {
+    const a = P[k.a], b = P[k.b];
+    if (!a || !b) return '';
+    const cls = k.type === 'couple' ? 'couple' + (k.status === 'separados' ? ' ended' : '') : k.type === 'friend' ? 'friend' : '';
+    return `<line class="fm-line ${cls} ${hl?.edges.has(k.id) ? 'hl' : ''}" data-k="${k.id}" x1="${a[0] + ox}" y1="${a[1] + oy}" x2="${b[0] + ox}" y2="${b[1] + oy}"/>`;
+  };
+  const node = p => `<div class="fn ${fmSel === p.id ? 'sel' : ''} ${hl?.nodes.has(p.id) ? 'hl' : ''}" data-fm="${p.id}" style="left:${P[p.id][0] + ox}px;top:${P[p.id][1] + oy}px;--fc:${fmColor(p)}">
+    ${fmAv(p)}<span class="fn-nm">${esc(fmShort(p))}</span></div>`;
+  return { W, H, ox, oy, dim: !!hl, html: `<svg width="${W}" height="${H}">${S.kin.map(edge).join('')}</svg>${S.people.map(node).join('')}` };
+}
+// Lienzo: arrastrar el fondo mueve la vista; en la red, arrastrar una persona la reubica; tocar = elegir
+function fmBindCanvas(wrap, net) {
+  wrap.onpointerdown = e => {
+    if (e.button) return;
+    const z = fmZoom[fmTab], sx = e.clientX, sy = e.clientY, el = e.target.closest('[data-fm]');
+    let moved = false;
+    const listen = (move, done) => {
+      try { wrap.setPointerCapture(e.pointerId); } catch {}
+      const up = () => { wrap.removeEventListener('pointermove', move); wrap.removeEventListener('pointerup', up); wrap.removeEventListener('pointercancel', up); done(); };
+      wrap.addEventListener('pointermove', move); wrap.addEventListener('pointerup', up); wrap.addEventListener('pointercancel', up);
+    };
+    const tap = () => fmTap(el?.dataset.fm || null);
+    if (net && el) {
+      const id = el.dataset.fm, o = [...S.netPos[id]], ox = Number(wrap.dataset.ox), oy = Number(wrap.dataset.oy);
+      const lines = $$('line[data-k]', wrap).map(l => [l, findById(S.kin, l.dataset.k)]).filter(([, k]) => k && (k.a === id || k.b === id));
+      listen(ev => {
+        const dx = (ev.clientX - sx) / z, dy = (ev.clientY - sy) / z;
+        if (!moved && Math.hypot(dx, dy) < 4) return;
+        moved = true;
+        const x = Math.round(o[0] + dx), y = Math.round(o[1] + dy);
+        S.netPos[id] = [x, y];
+        el.style.left = x + ox + 'px'; el.style.top = y + oy + 'px';
+        lines.forEach(([l, k]) => { const n = k.a === id ? 1 : 2; l.setAttribute('x' + n, x + ox); l.setAttribute('y' + n, y + oy); });
+      }, () => { if (moved) save(); else tap(); });
+      return;
+    }
+    const sl = wrap.scrollLeft, st = wrap.scrollTop;
+    wrap.classList.add('panning');
+    listen(ev => { if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 4) moved = true; wrap.scrollLeft = sl - (ev.clientX - sx); wrap.scrollTop = st - (ev.clientY - sy); },
+      () => { wrap.classList.remove('panning'); if (!moved) tap(); });
+  };
+  wrap.onwheel = e => { if (!e.ctrlKey) return; e.preventDefault(); fmSetZoom(fmZoom[fmTab] * (e.deltaY < 0 ? 1.1 : 0.9)); };
+  wrap.onclick = e => { if (e.detail === 0) { const el = e.target.closest('[data-fm]'); if (el) fmTap(el.dataset.fm); } };   // Enter o espacio sobre una tarjeta
+}
+function fmTap(id) {
+  if (fmTab === 'arbol') {
+    if (!id) return;
+    if (id === fmFocus) fmPersonModal(fmP(id));
+    else { fmFocus = id; renderAll(); }
+    return;
+  }
+  fmSel = id && fmSel !== id ? id : null; fmFam = null; fmPath = null;
+  renderAll();
+}
+const fmScroll = {};   // posición de la vista por pestaña (el árbol solo la recuerda si no cambió la persona central)
+function fmDraw(root) {
+  const wrap = $('.fm-wrap', root);
+  if (!wrap) return;
+  const net = fmTab === 'red', d = net ? fmNetHtml() : fmTreeHtml(), z = fmZoom[fmTab];
+  if (net) { wrap.dataset.ox = d.ox; wrap.dataset.oy = d.oy; }
+  wrap.onscroll = null;
+  wrap.innerHTML = `<div class="fm-stage" style="width:${d.W * z}px;height:${d.H * z}px"><div class="fm-inner ${d.dim ? 'fm-dim' : ''}" style="width:${d.W}px;height:${d.H}px;transform:scale(${z})">${d.html}</div></div>`;
+  fmBindCanvas(wrap, net);
+  const s = fmScroll[fmTab], t = !net && $('.fm-card.focus', wrap);
+  if (s && (net || s[2] === fmFocus)) { wrap.scrollLeft = s[0]; wrap.scrollTop = s[1]; }
+  else if (t) { wrap.scrollLeft = (parseFloat(t.style.left) + FM_CW / 2) * z - wrap.clientWidth / 2; wrap.scrollTop = (parseFloat(t.style.top) + FM_CH / 2) * z - wrap.clientHeight / 2; }
+  else { wrap.scrollLeft = (d.W * z - wrap.clientWidth) / 2; wrap.scrollTop = (d.H * z - wrap.clientHeight) / 2; }
+  fmScroll[fmTab] = [wrap.scrollLeft, wrap.scrollTop, fmFocus];
+  wrap.onscroll = () => { fmScroll[fmTab] = [wrap.scrollLeft, wrap.scrollTop, fmFocus]; };
+}
+function fmSetZoom(z) {
+  const wrap = $('#view-familias .fm-wrap');
+  if (!wrap) return;
+  const old = fmZoom[fmTab], cx = (wrap.scrollLeft + wrap.clientWidth / 2) / old, cy = (wrap.scrollTop + wrap.clientHeight / 2) / old;
+  fmZoom[fmTab] = clamp(Math.round(z * 100) / 100, 0.3, 1.8);
+  fmDraw($('#view-familias'));
+  wrap.scrollLeft = cx * fmZoom[fmTab] - wrap.clientWidth / 2; wrap.scrollTop = cy * fmZoom[fmTab] - wrap.clientHeight / 2;
+  fmScroll[fmTab] = [wrap.scrollLeft, wrap.scrollTop, fmFocus];
+}
+
+/* Parentesco: camino más corto (sangre primero, luego pareja, amistad al final) y nombre en español */
+function fmRoute(a, b) {
+  const adj = {};
+  const add = (x, y, s, w) => (adj[x] ||= []).push([y, s, w]);
+  S.kin.forEach(k => {
+    if (k.type === 'parent') { add(k.b, k.a, 'U', 1); add(k.a, k.b, 'D', 1); }
+    else if (k.type === 'couple') { add(k.a, k.b, 'S', 1.2); add(k.b, k.a, 'S', 1.2); }
+    else { add(k.a, k.b, 'F', 4); add(k.b, k.a, 'F', 4); }
+  });
+  const dist = { [a]: 0 }, prev = {}, done = new Set();
+  for (;;) {
+    let u = null;
+    for (const k in dist) if (!done.has(k) && (u === null || dist[k] < dist[u])) u = k;
+    if (u === null) return null;
+    if (u === b) break;
+    done.add(u);
+    for (const [v, s, w] of adj[u] || []) if (!done.has(v) && (dist[v] === undefined || dist[u] + w < dist[v])) { dist[v] = dist[u] + w; prev[v] = [u, s]; }
+  }
+  const path = [];
+  for (let c = b; c !== a; c = prev[c][0]) path.unshift({ id: c, step: prev[c][1] });
+  return [{ id: a, step: '' }, ...path];
+}
+const FM_ORD = ['', '', 'segundo', 'tercero', 'cuarto', 'quinto', 'sexto'];
+function fmBlood(g, h, sex) {   // g: pasos hacia arriba desde X, h: hacia abajo hasta Y → qué es X de Y
+  const w = (m, f) => fmG(sex, m, f);
+  if (h === 0) return [, w('hijo', 'hija'), w('nieto', 'nieta'), w('bisnieto', 'bisnieta'), w('tataranieto', 'tataranieta')][g] || 'descendiente';
+  if (g === 0) return [, fmG(sex, 'padre', 'madre'), w('abuelo', 'abuela'), w('bisabuelo', 'bisabuela'), w('tatarabuelo', 'tatarabuela')][h] || 'antepasado';
+  if (g === 1 && h === 1) return w('hermano', 'hermana');
+  if (g === 1) return [, , w('tío', 'tía'), w('tío abuelo', 'tía abuela'), w('tío bisabuelo', 'tía bisabuela')][h] || 'pariente';
+  if (h === 1) return [, , w('sobrino', 'sobrina'), w('sobrino nieto', 'sobrina nieta'), w('sobrino bisnieto', 'sobrina bisnieta')][g] || 'pariente';
+  if (g === h) return g === 2 ? w('primo hermano', 'prima hermana') : `${w('primo', 'prima')} ${FM_ORD[g - 1] ? (sex === 'f' ? FM_ORD[g - 1].replace(/o$/, 'a') : FM_ORD[g - 1]) : 'lejano'}`;
+  if (Math.abs(g - h) === 1) { const o = FM_ORD[Math.min(g, h)] || '', oo = sex === 'f' ? o.replace(/o$/, 'a') : o; return g < h ? `${w('tío', 'tía')} ${oo}`.trim() : `${w('sobrino', 'sobrina')} ${oo}`.trim(); }
+  return w('pariente lejano', 'pariente lejana');
+}
+function fmKinship(a, b) {
+  if (a === b) return { text: 'Es la misma persona.', path: [a] };
+  const route = fmRoute(a, b);
+  if (!route) return null;
+  const A = fmP(a), sx = A.sex, steps = route.slice(1).map(r => r.step).join(''), w = (m, f) => fmG(sx, m, f);
+  const couples = route.slice(1).filter(r => r.step === 'S').map((r, i) => fmLinked(route[route.indexOf(r) - 1].id, r.id));
+  const ex = couples.some(k => k?.status === 'separados') ? 'ex ' : '';
+  const direct = {   // afinidad: nombres propios para caminos cortos
+    S: () => { const st = FM_COUPLE[couples[0]?.status] || FM_COUPLE.casados; return st === FM_COUPLE.separados ? 'ex pareja' : w(st[1], st[2]); },
+    F: () => w('amigo', 'amiga'),
+    SU: () => ex + w('yerno', 'nuera'), DS: () => ex + w('suegro', 'suegra'),
+    SUD: () => ex + w('cuñado', 'cuñada'), UDS: () => ex + w('cuñado', 'cuñada'), SUDS: () => ex + w('concuñado', 'concuñada'),
+    DSU: () => ex + w('consuegro', 'consuegra'), US: () => w('hijastro', 'hijastra'), SD: () => fmG(sx, 'padrastro', 'madrastra'), USD: () => w('hermanastro', 'hermanastra'),
+  };
+  const nm = id => `<strong>${esc(fmShort(fmP(id)))}</strong>`;
+  if (direct[steps]) return { text: `${nm(a)} es ${direct[steps]()} de ${nm(b)}.`, path: route.map(r => r.id), hops: [{ from: a, to: b, word: direct[steps]() }] };
+  // Tramos: sangre (subir y luego bajar), pareja o amistad
+  const hops = [];
+  let i = 0;
+  while (i < route.length - 1) {
+    const from = route[i].id, s = route[i + 1].step;
+    if (s === 'S' || s === 'F') {
+      const p = fmP(from), k = fmLinked(from, route[i + 1].id), st = FM_COUPLE[k?.status] || FM_COUPLE.casados;
+      hops.push({ from, to: route[i + 1].id, word: s === 'F' ? fmG(p.sex, 'amigo', 'amiga') : st === FM_COUPLE.separados ? 'ex pareja' : fmG(p.sex, st[1], st[2]) });
+      i++; continue;
+    }
+    let g = 0, h = 0, j = i;
+    while (j < route.length - 1 && route[j + 1].step === 'U' && !h) { g++; j++; }
+    while (j < route.length - 1 && route[j + 1].step === 'D') { h++; j++; }
+    hops.push({ from, to: route[j].id, word: fmBlood(g, h, fmP(from).sex) });
+    i = j;
+  }
+  const text = hops.map((h, n) => `${n ? 'que es' : `${nm(h.from)} es`} ${h.word} de ${nm(h.to)}`).join(', ') + '.';
+  return { text, path: route.map(r => r.id), hops };
+}
+function fmKinHtml() {
+  if (S.people.length < 2) return `<div class="card">${empty('Agrega al menos dos personas para ver cómo se relacionan', 'tree')}</div>`;
+  if (!fmP(fmA)) fmA = fmP(S.meId) ? S.meId : fmSorted()[0].id;
+  if (!fmP(fmB) || fmB === fmA) fmB = fmSorted().find(p => p.id !== fmA).id;
+  const r = fmKinship(fmA, fmB);
+  const mini = id => { const p = fmP(id); return `<button class="fm-mini" data-act="fmEdit" data-id="${id}" style="--fc:${fmColor(p)}">${fmAv(p)}<span>${esc(fmShort(p))}</span></button>`; };
+  return `<section class="card">
+    <div class="row2 fm-pick"><label class="fld"><span>Persona</span><select data-chg="fmA">${fmOptions(fmA)}</select></label>
+      <label class="fld"><span>Con</span><select data-chg="fmB">${fmOptions(fmB, fmA)}</select></label></div>
+    <button class="btn btn-sm" data-act="fmSwap">${ic('arrows-left-right')} Invertir</button>
+    ${r ? `<p class="fm-answer">${r.text}</p>
+      ${r.hops ? `<div class="fm-chain">${mini(r.hops[0].from)}${r.hops.map(h => `<span class="fm-arrow">${esc(h.word)} de ${ic('arrow-right')}</span>${mini(h.to)}`).join('')}</div>` : ''}
+      ${r.path.length > 1 ? `<div class="btns" style="margin-top:14px"><button class="btn btn-primary btn-sm" data-act="fmShowPath">${ic('graph')} Ver en la red</button></div>` : ''}`
+      : `<p class="fm-answer">No encontré un vínculo entre ${esc(fmShort(fmP(fmA)))} y ${esc(fmShort(fmP(fmB)))}.</p><p class="hint">Agrega familiares o amistades que los conecten.</p>`}
+  </section>`;
+}
+
+/* Personas */
+function fmListHtml() {
+  const words = sNorm(fmQuery).split(/\s+/).filter(Boolean);
+  const list = fmSorted().filter(p => (fmChurch === 'todos' || p.church === fmChurch) && words.every(w => sNorm(`${fmFull(p)} ${p.roles} ${p.notes}`).includes(w)));
+  const fams = {};
+  list.forEach(p => (fams[p.last1?.trim() || 'Sin apellido'] ||= []).push(p));
+  return `<div class="ay-bar"><div class="ay-boards">${[['todos', 'Todas'], ['hoy', 'En la iglesia'], ['antes', 'Estuvieron antes']].map(([k, l]) => `<button class="ay-tab ${fmChurch === k ? 'on' : ''}" data-act="fmChurch" data-c="${k}">${l}</button>`).join('')}</div>
+      <input type="search" class="inp ay-q" data-inp="fmQuery" value="${esc(fmQuery)}" placeholder="Buscar persona…" aria-label="Buscar persona"></div>
+    ${list.length ? Object.entries(fams).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([f, ps]) => `<section class="card fm-fam" style="--fc:${fmColor(ps[0])}">
+      <div class="card-h"><h2>Familia ${esc(f)}</h2><span class="badge">${ps.length}</span></div>
+      <ul class="list plain">${ps.map(p => { const ch = FM_CHURCH[p.church]; return `<li class="fm-row" data-id="${p.id}"><button class="fm-row-b" data-act="fmEdit" data-id="${p.id}" style="--fc:${fmColor(p)}">${fmAv(p)}
+        <span class="fm-row-t"><strong>${esc(fmFull(p))}${p.id === S.meId ? ' <small>(yo)</small>' : ''}</strong>
+        <span class="td-m">${ch ? `<span>${ic(ch[1])} ${ch[0]}${p.from || p.to ? ` · ${[p.from, p.church === 'antes' ? p.to : ''].filter(Boolean).join('–')}` : ''}</span>` : ''}${p.roles ? `<span>${esc(p.roles)}</span>` : ''}</span></span></button>
+        <button class="icon-btn" data-act="fmTreeOf" data-id="${p.id}" title="Ver su árbol" aria-label="Ver su árbol">${ic('tree')}</button></li>`; }).join('')}</ul></section>`).join('')
+      : `<div class="card">${empty(S.people.length ? 'Nadie coincide con la búsqueda' : 'Todavía no hay personas', 'users-three')}</div>`}`;
+}
+function renderFamilias(root) {
+  if (!fmP(fmFocus)) fmFocus = fmP(S.meId) ? S.meId : S.people[0]?.id || null;
+  const tabs = [['arbol', 'Árbol', 'tree'], ['red', 'Red', 'graph'], ['parentesco', 'Parentesco', 'arrows-left-right'], ['personas', 'Personas', 'users-three']];
+  const head = `<div class="page-h"><div><h1>Familias</h1><p class="sub">Tu familia, la iglesia de hoy y la de antes: cómo se enlazan todos.</p></div>
+      <button class="btn btn-primary" data-act="fmNew">${ic('user-plus')} Persona</button></div>
+    <div class="seg bx-tabs" style="margin-bottom:12px">${tabs.map(([k, l, i]) => `<button class="${fmTab === k ? 'on' : ''}" data-act="fmTab" data-t="${k}" aria-pressed="${fmTab === k}">${ic(i)} ${l}</button>`).join('')}</div>`;
+  if (!S.people.length) {
+    root.innerHTML = head + `<div class="card">${empty('Empieza por ti: crea tu ficha y luego agrega a tus padres, hermanos, pareja e hijos.', 'tree')}
+      <div class="btns center"><button class="btn btn-primary" data-act="fmMe">${ic('user-circle')} Crear mi ficha</button></div></div>`;
+    return;
+  }
+  const zoom = `<span class="fm-zoom"><button class="icon-btn" data-act="fmZoom" data-z="-1" aria-label="Alejar">${ic('magnifying-glass-minus')}</button><button class="icon-btn" data-act="fmZoom" data-z="1" aria-label="Acercar">${ic('magnifying-glass-plus')}</button></span>`;
+  let body = '';
+  if (fmTab === 'arbol') {
+    const f = fmP(fmFocus);
+    body = `<div class="fm-bar"><span class="fm-focus" style="--fc:${fmColor(f)}">${fmAv(f)}<span><strong>${esc(fmFull(f))}</strong><small class="hint" style="display:block;margin:0">Toca a alguien para centrar su árbol; tócala de nuevo para ver su ficha.</small></span></span>
+        <button class="btn btn-sm" data-act="fmAdd" data-id="${f.id}">${ic('plus')} Familiar o amistad</button>
+        <button class="btn btn-sm" data-act="fmEdit" data-id="${f.id}">${ic('identification-card')} Ficha</button>
+        ${fmP(S.meId) && S.meId !== f.id ? `<button class="btn btn-sm" data-act="fmTreeOf" data-id="${S.meId}">${ic('heart')} Yo</button>` : ''}${zoom}</div>
+      <div class="fm-wrap" tabindex="0" aria-label="Árbol familiar"></div>`;
+  } else if (fmTab === 'red') {
+    const fams = {};
+    S.people.forEach(p => { const k = fmFamKey(p); if (k) (fams[k] ||= { name: p.last1.trim(), p, n: 0 }).n++; });
+    const sel = fmP(fmSel), ch = sel && FM_CHURCH[sel.church];
+    body = `<div class="fm-bar"><div class="fm-legend">${Object.entries(fams).sort((a, b) => b[1].n - a[1].n || a[1].name.localeCompare(b[1].name, 'es')).map(([k, f]) =>
+        `<button class="fm-chip ${fmFam === k ? 'on' : ''}" data-act="fmFam" data-k="${esc(k)}" style="--fc:${fmColor(f.p)}"><i></i>${esc(f.name)} <small>${f.n}</small></button>`).join('')}</div>
+        <select class="inp fm-church" data-chg="fmChurch" aria-label="Destacar">${[['todos', 'Todas las personas'], ['hoy', 'Destacar: en la iglesia'], ['antes', 'Destacar: estuvieron antes']].map(([k, l]) => `<option value="${k}" ${fmChurch === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <button class="btn btn-sm" data-act="fmRelayout" title="Recalcular la posición de todos">${ic('shuffle')} Ordenar</button>${zoom}</div>
+      <div class="fm-wrap" tabindex="0" aria-label="Red de personas"></div>
+      <p class="hint fm-key"><span class="k-p"></span> padres e hijos <span class="k-c"></span> pareja <span class="k-f"></span> amistad · arrastra a alguien para moverlo</p>
+      ${sel ? `<section class="card fm-selcard" style="--fc:${fmColor(sel)}">${fmAv(sel)}<div><strong>${esc(fmFull(sel))}</strong><small class="hint" style="display:block;margin:0">${[ch?.[0], sel.roles].filter(Boolean).map(esc).join(' · ')}</small></div>
+        <div class="btns"><button class="btn btn-sm" data-act="fmTreeOf" data-id="${sel.id}">${ic('tree')} Árbol</button><button class="btn btn-sm" data-act="fmEdit" data-id="${sel.id}">${ic('identification-card')} Ficha</button>
+        <button class="btn btn-sm" data-act="fmAdd" data-id="${sel.id}">${ic('plus')} Vínculo</button><button class="btn btn-sm" data-act="fmKinWith" data-id="${sel.id}">${ic('arrows-left-right')} Parentesco</button></div></section>` : ''}`;
+  } else body = fmTab === 'parentesco' ? fmKinHtml() : fmListHtml();
+  root.innerHTML = head + body;
+  fmDraw(root);
+}
+
+/* Fichas y vínculos */
+function fmPersonModal(p = null, opts = {}) {
+  const x = p || { name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', roles: '', notes: '' };
+  let photo = x.photo;
+  const rel = [];
+  if (p) {
+    fmParents(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === id && k.b === p.id), fmG(fmP(id).sex, 'Padre', 'Madre'), id]));
+    fmCouples(p.id).forEach(k => rel.push([k, `Pareja · ${(FM_COUPLE[k.status] || FM_COUPLE.casados)[0]}`, k.a === p.id ? k.b : k.a]));
+    fmChildren(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === p.id && k.b === id), fmG(fmP(id).sex, 'Hijo', 'Hija'), id]));
+    fmFriends(p.id).forEach(id => rel.push([fmLinked(p.id, id), fmG(fmP(id).sex, 'Amigo', 'Amiga'), id]));
+  }
+  const sibs = p ? fmSiblings(p.id) : [];
+  const yr = (n, v, l) => `<label class="fld"><span>${l}</span><input name="${n}" inputmode="numeric" maxlength="4" value="${esc(v)}" placeholder="Año"></label>`;
+  openModal(p ? fmFull(p) : 'Nueva persona', `
+    <div class="fm-photo"><span class="fm-photo-pv" data-pv style="--fc:${fmColor(x)}">${fmAv({ ...x, name: x.name || '?' })}</span>
+      <div class="btns"><button type="button" class="btn btn-sm" data-photo>${ic('camera')} ${photo ? 'Cambiar' : 'Subir'} foto</button><button type="button" class="btn btn-sm" data-nophoto ${photo ? '' : 'hidden'}>Quitar</button></div></div>
+    <label class="fld"><span>Nombres</span><input name="name" required maxlength="80" value="${esc(x.name)}"></label>
+    <div class="row2"><label class="fld"><span>Primer apellido</span><input name="last1" maxlength="60" value="${esc(x.last1)}"></label>
+      <label class="fld"><span>Segundo apellido</span><input name="last2" maxlength="60" value="${esc(x.last2)}"></label></div>
+    <label class="fld"><span>Es</span><select name="sex"><option value="">Sin indicar</option><option value="f" ${x.sex === 'f' ? 'selected' : ''}>Mujer</option><option value="m" ${x.sex === 'm' ? 'selected' : ''}>Hombre</option></select></label>
+    <h3 class="sub-h">Iglesia</h3>
+    <label class="fld"><span>Situación</span><select name="church"><option value="">Sin indicar</option>${Object.entries(FM_CHURCH).map(([k, [l]]) => `<option value="${k}" ${x.church === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="row2">${yr('from', x.from, 'Desde')}${yr('to', x.to, 'Hasta (si ya no está)')}</div>
+    <label class="fld"><span>Ministerios o servicio</span><input name="roles" maxlength="160" value="${esc(x.roles)}" placeholder="Alabanza, escuela dominical, diácono…"></label>
+    <label class="fld"><span>Notas</span><textarea name="notes" rows="3" placeholder="Recuerdos, anécdotas, dónde vive ahora…">${esc(x.notes)}</textarea></label>
+    <label class="toggle"><input type="checkbox" name="me" ${p && p.id === S.meId || opts.me ? 'checked' : ''}> <span>Esta persona soy yo</span></label>
+    ${p ? `<h3 class="sub-h">Vínculos</h3>
+      ${rel.length || sibs.length ? `<ul class="list plain fm-rels">${rel.filter(r => r[0]).map(([k, l, id]) => `<li class="pr"><span class="pr-t"><small>${l}</small> ${esc(fmFull(fmP(id)))}</span><button type="button" class="icon-btn" data-unlink="${k.id}" title="Quitar vínculo" aria-label="Quitar vínculo">${ic('x')}</button></li>`).join('')}
+        ${sibs.map(id => `<li class="pr"><span class="pr-t"><small>${fmG(fmP(id).sex, 'Hermano', 'Hermana')}</small> ${esc(fmFull(fmP(id)))}</span></li>`).join('')}</ul>` : '<p class="hint">Sin vínculos todavía.</p>'}
+      <button type="button" class="btn btn-sm" data-addrel>${ic('plus')} Familiar o amistad</button>` : ''}`, {
+    onSave: fd => {
+      const t = p || { id: uid(), created: Date.now() };
+      const old = t.photo;
+      Object.assign(t, { name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'), photo,
+        church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), roles: fd.get('roles').trim(), notes: fd.get('notes').trim() });
+      if (old && old !== photo) imgStore.del(old);
+      if (!p) S.people.push(t);
+      if (fd.get('me') === 'on') S.meId = t.id; else if (S.meId === t.id) S.meId = null;
+      if (!fmP(fmFocus)) fmFocus = t.id;
+      save(); renderAll();
+      opts.after?.(t);
+    },
+    onDelete: p ? () => {
+      S.people = S.people.filter(y => y !== p); S.kin = S.kin.filter(k => k.a !== p.id && k.b !== p.id);
+      delete S.netPos[p.id]; imgStore.del(p.photo);
+      if (S.meId === p.id) S.meId = null;
+      if (fmFocus === p.id) fmFocus = null;
+      if (fmSel === p.id) fmSel = null;
+      fmPath = null; save(); renderAll();
+    } : null,
+    onOpen: f => {
+      const pv = $('[data-pv]', f), no = $('[data-nophoto]', f);
+      const paint = () => { pv.innerHTML = fmAv({ name: f.elements.name.value || '?', last1: f.elements.last1.value, photo }); no.hidden = !photo; };
+      $('[data-photo]', f).onclick = async () => { const [id] = await pickImage(false, 480); if (id) { photo = id; paint(); } };
+      no.onclick = () => { photo = null; paint(); };
+      $$('[data-unlink]', f).forEach(b => b.onclick = () => {
+        if (!confirm('¿Quitar este vínculo?')) return;
+        S.kin = S.kin.filter(k => k.id !== b.dataset.unlink); fmPath = null;
+        b.closest('li').remove(); save(); renderAll();
+      });
+      const ar = $('[data-addrel]', f);
+      if (ar) ar.onclick = () => { modal.close(); fmAddModal(p); };
+    },
+  });
+}
+function fmAddModal(base, type = 'parent') {
+  const ps = fmParents(base.id), partners = fmPartners(base.id), others = fmSorted().filter(p => p.id !== base.id);
+  const T = [['parent', 'Padre o madre'], ['couple', 'Pareja'], ['child', 'Hijo o hija'], ['sibling', 'Hermano o hermana'], ['friend', 'Amistad']];
+  openModal(`Vínculo de ${fmShort(base)}`, `
+    <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type">${T.map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${others.length ? `<div class="seg" style="margin-bottom:12px"><button type="button" class="on" data-who="new">Persona nueva</button><button type="button" data-who="old">Ya está en la lista</button></div>` : ''}
+    <input type="hidden" name="who" value="new">
+    <div data-new>
+      <label class="fld"><span>Nombres</span><input name="name" maxlength="80"></label>
+      <div class="row2"><label class="fld"><span>Primer apellido</span><input name="last1" maxlength="60"></label><label class="fld"><span>Segundo apellido</span><input name="last2" maxlength="60"></label></div>
+      <label class="fld"><span>Es</span><select name="sex"><option value="">Sin indicar</option><option value="f">Mujer</option><option value="m">Hombre</option></select></label>
+    </div>
+    <label class="fld" data-old hidden><span>Persona</span><select name="other">${others.map(p => `<option value="${p.id}">${esc(fmFull(p))}</option>`).join('')}</select></label>
+    <label class="fld" data-for="couple"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="fld" data-for="child"><span>¿Con quién?</span><select name="with"><option value="">Nadie o no sé</option>${partners.map(id => `<option value="${id}">${esc(fmFull(fmP(id)))}</option>`).join('')}</select></label>
+    ${ps.length === 1 ? `<label class="toggle" data-for="parent"><input type="checkbox" name="pair" checked> <span>Es pareja de ${esc(fmFull(fmP(ps[0])))}</span></label>` : ''}
+    <div data-for="sibling">${ps.length ? `<p class="hint">Comparten:</p>${ps.map(id => `<label class="toggle" style="margin-right:14px"><input type="checkbox" name="sp" value="${id}" checked> <span>${esc(fmShort(fmP(id)))}</span></label>`).join('')}`
+      : `<p class="modal-err" style="display:block">Para agregar hermanos, primero agrega al menos a uno de los padres de ${esc(fmShort(base))}.</p>`}</div>`, {
+    saveLabel: 'Agregar',
+    onSave: fd => {
+      const t = fd.get('type'), isNew = fd.get('who') === 'new';
+      if (t === 'sibling' && !ps.length) return 'Primero agrega al menos a uno de sus padres.';
+      if (t === 'parent' && ps.length >= 2) return `${fmShort(base)} ya tiene dos padres anotados.`;
+      if (isNew && !fd.get('name').trim()) return 'Escribe el nombre.';
+      const otherId = isNew ? null : fd.get('other');
+      if (!isNew) {
+        if (!otherId) return 'Elige a la persona.';
+        if (t === 'parent' && (ps.includes(otherId) || fmIsAncestor(base.id, otherId))) return 'Ese vínculo no es posible.';
+        if (t === 'child' && (fmChildren(base.id).includes(otherId) || fmIsAncestor(otherId, base.id))) return 'Ese vínculo no es posible.';
+        if (t === 'child' && fmParents(otherId).length >= 2) return 'Esa persona ya tiene dos padres anotados.';
+        if ((t === 'couple' || t === 'friend') && fmLinked(base.id, otherId)) return 'Ya tienen un vínculo.';
+      }
+      let o = otherId && fmP(otherId);
+      if (!o) {
+        o = { id: uid(), created: Date.now(), name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'),
+          photo: null, church: '', from: '', to: '', roles: '', notes: '' };
+        S.people.push(o);
+      }
+      const link = (type, a, b, extra = {}) => { if (!fmLinked(a, b) || type === 'parent') S.kin.push({ id: uid(), type, a, b, ...extra }); };
+      if (t === 'parent') { link('parent', o.id, base.id); if (ps.length === 1 && fd.get('pair') === 'on' && !fmLinked(ps[0], o.id)) link('couple', ps[0], o.id, { status: 'casados' }); }
+      if (t === 'child') { link('parent', base.id, o.id); const w = fd.get('with'); if (w && !fmParents(o.id).includes(w)) link('parent', w, o.id); }
+      if (t === 'couple') link('couple', base.id, o.id, { status: fd.get('status') });
+      if (t === 'friend') link('friend', base.id, o.id);
+      if (t === 'sibling') fd.getAll('sp').forEach(id => { if (!fmParents(o.id).includes(id) && !fmIsAncestor(o.id, id)) link('parent', id, o.id); });
+      fmPath = null; save(); renderAll();
+      toast({ title: 'Vínculo agregado', text: `${fmShort(o)} · ${T.find(x => x[0] === t)[1].toLowerCase()} de ${fmShort(base)}`, icon: 'tree' });
+    },
+    onOpen: f => {
+      const sync = () => {
+        const t = f.elements.type.value;
+        $$('[data-for]', f).forEach(el => el.hidden = el.dataset.for !== t);
+        // Sugerencia de apellidos para hijos y hermanos (si aún no se escribieron)
+        const l1 = f.elements.last1, l2 = f.elements.last2;
+        if (!l1.dataset.typed) {
+          const w = fmP(f.elements.with.value), dad = base.sex === 'm' ? base : w?.sex === 'm' ? w : null, mom = base.sex === 'f' ? base : w?.sex === 'f' ? w : null;
+          l1.value = t === 'sibling' ? base.last1 : t === 'child' ? dad?.last1 || '' : '';
+          l2.value = t === 'sibling' ? base.last2 : t === 'child' ? mom?.last1 || '' : '';
+        }
+      };
+      f.elements.last1.oninput = f.elements.last2.oninput = e => { e.target.dataset.typed = '1'; };
+      f.elements.type.onchange = sync; f.elements.with.onchange = sync; sync();
+      $$('[data-who]', f).forEach(b => b.onclick = () => {
+        const old = b.dataset.who === 'old';
+        f.elements.who.value = b.dataset.who;
+        $$('[data-who]', f).forEach(x => x.classList.toggle('on', x === b));
+        $('[data-new]', f).hidden = old; $('[data-old]', f).hidden = !old;
+      });
+    },
+  });
+}
+Object.assign(ACT, {
+  fmTab: el => { fmTab = el.dataset.t; renderAll(); },
+  fmNew: () => fmPersonModal(null, { me: !S.people.length }),
+  fmMe: () => fmPersonModal(null, { me: true, after: t => { fmFocus = t.id; } }),
+  fmEdit: el => { const p = fmP(el.dataset.id); p && fmPersonModal(p); },
+  fmAdd: el => { const p = fmP(el.dataset.id); p && fmAddModal(p); },
+  fmTreeOf: el => { fmFocus = el.dataset.id; fmTab = 'arbol'; renderAll(); },
+  fmKinWith: el => { fmA = fmP(S.meId) && S.meId !== el.dataset.id ? S.meId : fmA; fmB = el.dataset.id; fmTab = 'parentesco'; renderAll(); },
+  fmSwap: () => { [fmA, fmB] = [fmB, fmA]; renderAll(); },
+  fmShowPath: () => { const r = fmKinship(fmA, fmB); fmPath = r?.path || null; fmSel = null; fmFam = null; fmTab = 'red'; renderAll(); },
+  fmFam: el => { fmFam = fmFam === el.dataset.k ? null : el.dataset.k; fmSel = null; fmPath = null; renderAll(); },
+  fmChurch: el => { fmChurch = el.dataset.c; renderAll(); },
+  fmZoom: el => fmSetZoom(fmZoom[fmTab] + Number(el.dataset.z) * 0.15),
+  fmRelayout: () => { if (confirm('¿Reordenar a todas las personas en la red? Se pierden las posiciones que moviste a mano.')) { fmNetEnsure(true); renderAll(); } },
+});
+Object.assign(CHG, {
+  fmA: el => { fmA = el.value; renderAll(); },
+  fmB: el => { fmB = el.value; renderAll(); },
+  fmChurch: el => { fmChurch = el.value; fmSel = null; fmFam = null; fmPath = null; renderAll(); },
+});
+Object.assign(INP, {
+  fmQuery: el => {
+    fmQuery = el.value;
+    const root = $('#view-familias'), pos = el.selectionStart;
+    renderAll();
+    const i = $('[data-inp="fmQuery"]', root); if (i) { i.focus(); i.setSelectionRange(pos, pos); }
+  },
+});
+
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -5171,6 +5797,8 @@ const searchSources = () => [
       fields: [t.text, t.notes], open: () => { S.todoList = t.list; go('tareas'); tdModal(t); } })) },
   { label: 'Bitácora', icon: 'popcorn', items: () => S.media.map(m => ({ title: m.title, sub: [BX[m.type].one, m.year, m.by].filter(Boolean).join(' · '),
       fields: [m.title, m.by, ...S.mediaLog.filter(l => l.media === m.id).map(l => l.review)], open: () => { go('bitacora'); bxModal(m); } })) },
+  { label: 'Familias', icon: 'tree', items: () => S.people.map(p => ({ title: fmFull(p), sub: [p.last1 ? 'Familia ' + p.last1 : '', FM_CHURCH[p.church]?.[0], p.roles].filter(Boolean).join(' · '),
+      fields: [fmFull(p), p.roles, p.notes], open: () => { fmFocus = p.id; fmTab = 'arbol'; go('familias'); fmPersonModal(p); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
@@ -5218,7 +5846,7 @@ const searchSources = () => [
 function runSearch(q) {
   const box = $('#srResults'), toks = sNorm(q).trim().split(/\s+/).filter(Boolean);
   searchRes = []; searchActive = 0;
-  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, tareas, libros y películas, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
+  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, tareas, personas, libros y películas, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
   let html = '';
   for (const src of searchSources()) {
     const hits = [];
