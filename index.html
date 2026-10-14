@@ -906,6 +906,7 @@
   .fm-row-t strong { overflow-wrap: anywhere; }
   .fm-photo { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
   .fm-photo-pv .fm-av { width: 72px; height: 72px; font-size: 22px; }
+  .fm-kst { width: auto; padding: 4px 8px; font-size: 13px; margin-left: auto; }
   .fm-rels small { color: var(--muted); font-weight: 700; margin-right: 4px; }
   @media (max-width: 760px) {
     .fm-wrap { height: calc(100dvh - 340px); min-height: 340px; }
@@ -4533,7 +4534,7 @@ Object.assign(CHG, {
 /* ---------- Familias (árbol y red de la comunidad) ---------- */
 // S.people = [{ id, name, last1, last2, sex: f|m|'', photo (imgId), church: hoy|antes|nunca|'', from, to (años), mins (ids de ministerios y subgrupos), notes, created }]
 // S.ministries = [{ id, name, subs: [{ id, name }] }]: catálogo editable; orden del array = orden en la ficha
-// S.kin = [{ id, a, b, type }]: parent (a es padre o madre de b) | couple (status: casados|pololos|separados) | friend
+// S.kin = [{ id, a, b, type }]: parent (a es padre o madre de b) | couple (status: ver FM_COUPLE) | friend (kind: ver FM_FRIEND)
 // S.meId = la usuaria; S.netPos = { id: [x, y] } posiciones en la red (las nuevas se calculan solas; "Ordenar" recalcula todo)
 // Familia = primer apellido (color estable por apellido)
 // ids fijos (por nombre) para que el catálogo inicial y la migración coincidan en todos los dispositivos
@@ -4568,7 +4569,12 @@ function fmMinText(p) {
   }).join(', ');
 }
 const FM_CHURCH = { hoy: ['En la iglesia', 'church'], antes: ['Estuvo en la iglesia', 'clock-counter-clockwise'], nunca: ['No va a la iglesia', 'house'] };
-const FM_COUPLE = { casados: ['Casados', 'esposo', 'esposa'], pololos: ['Pololos', 'pololo', 'polola'], separados: ['Separados', 'ex pareja', 'ex pareja'] };
+const FM_COUPLE = { casados: ['Casados', 'esposo', 'esposa'], pololos: ['Pololos o novios', 'pololo', 'polola'], exesposos: ['Divorciados (ex esposos)', 'ex esposo', 'ex esposa'],
+  expololos: ['Ex pololos o ex novios', 'ex pololo', 'ex polola'], separados: ['Separados', 'ex pareja', 'ex pareja'] };
+const fmEnded = k => ['separados', 'exesposos', 'expololos'].includes(k?.status);
+const FM_FRIEND = { amigos: ['Amistad', 'amigo', 'amiga'], mejores: ['Mejores amigos', 'mejor amigo', 'mejor amiga'], companeros: ['Compañeros de trabajo o estudio', 'compañero', 'compañera'],
+  vecinos: ['Vecinos', 'vecino', 'vecina'], conocidos: ['Conocidos', 'conocido', 'conocida'] };
+const fmFriendWord = (k, sex) => { const f = FM_FRIEND[k?.kind] || FM_FRIEND.amigos; return fmG(sex, f[1], f[2]); };
 const FM_COLORS = ['#cf5a8a', '#7d5fcf', '#d4724a', '#3a9674', '#4a84c4', '#a8770f', '#2f8f9d', '#8a6a4f'];
 const FM_CW = 124, FM_CH = 128, FM_HG = 22, FM_UG = 30, FM_VG = 64, FM_PAD = 80;
 let fmTab = 'arbol', fmFocus = null, fmSel = null, fmFam = null, fmPath = null, fmA = null, fmB = null, fmQuery = '', fmChurch = 'todos';
@@ -4595,51 +4601,98 @@ function fmIsAncestor(x, y) {   // ¿x es antepasado de y?
 const fmSorted = () => [...S.people].sort((a, b) => fmFull(a).localeCompare(fmFull(b), 'es'));
 const fmOptions = (sel, skip) => fmSorted().filter(p => p.id !== skip).map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(fmFull(p))}${p.id === S.meId ? ' (yo)' : ''}</option>`).join('');
 
-/* Árbol: antepasados hacia arriba y descendientes hacia abajo, ambos desde los padres de la persona elegida */
-function fmLayout(unit, kidsOf, depth, max) {
-  const kids = depth < max ? kidsOf(unit) : [];
-  const nodes = kids.map(k => fmLayout(k, kidsOf, depth + 1, max));
-  const self = unit.members.length * FM_CW + (unit.members.length - 1) * FM_HG;
-  const kw = nodes.reduce((n, k) => n + k.w, 0) + Math.max(0, nodes.length - 1) * FM_UG;
-  return { unit, kids: nodes, self, kw, w: Math.max(self, kw) };
+/* Árbol: toda la familia de la persona elegida, por generaciones */
+// Sangre = descendientes de todos sus antepasados; más la familia de sangre de su(s) pareja(s),
+// los otros padres de cada uno y las parejas (también ex) de todos ellos
+function fmFamilySet(focus) {
+  const blood = x => {
+    const anc = new Set([x]), up = [x];
+    while (up.length) for (const p of fmParents(up.pop())) if (!anc.has(p)) { anc.add(p); up.push(p); }
+    const out = new Set(anc), down = [...anc];
+    while (down.length) for (const c of fmChildren(down.pop())) if (!out.has(c)) { out.add(c); down.push(c); }
+    return out;
+  };
+  const set = blood(focus);
+  fmPartners(focus).forEach(q => blood(q).forEach(id => set.add(id)));
+  [...set].forEach(id => fmParents(id).forEach(p => set.add(p)));
+  [...set].forEach(id => fmPartners(id).forEach(p => set.add(p)));
+  return set;
 }
-function fmPlace(node, left, depth, dir, cards, lines) {
-  const top = depth * dir * (FM_CH + FM_VG), x0 = left + (node.w - node.self) / 2;
-  node.xs = node.unit.members.map((id, i) => x0 + i * (FM_CW + FM_HG));
-  node.top = top;
-  node.unit.members.forEach((id, i) => { if (!(node.unit.skipRoot && depth === 0)) cards.push({ id, x: node.xs[i], y: top }); });
-  node.unit.members.forEach((id, i) => {   // línea de pareja entre tarjetas vecinas
-    if (!i) return;
-    const k = fmLinked(node.unit.members[i - 1], id);
-    if (k?.type === 'couple') lines.push({ cls: 'couple' + (k.status === 'separados' ? ' ended' : ''), d: `M${node.xs[i - 1] + FM_CW},${top + FM_CH / 2} H${node.xs[i]}` });
-  });
-  let x = left + (node.w - node.kw) / 2;
-  node.kids.forEach(k => { fmPlace(k, x, depth + 1, dir, cards, lines); x += k.w + FM_UG; });
-  const cx = i => node.xs[i] + FM_CW / 2;
-  node.kids.forEach(k => {
-    const kx = k.xs.reduce((a, b) => a + b, 0) / k.xs.length + FM_CW / 2;
-    if (dir > 0) {   // de la pareja (o del padre/madre) al hijo
-      const ps = fmParents(k.unit.members[0]), idx = node.unit.members.map((m, i) => ps.includes(m) ? i : -1).filter(i => i >= 0);
-      const px = idx.length ? idx.reduce((a, i) => a + cx(i), 0) / idx.length : cx(0), py = idx.length > 1 ? top + FM_CH / 2 : top + FM_CH, my = top + FM_CH + FM_VG / 2;
-      lines.push({ cls: '', d: `M${px},${py} V${my} H${k.xs[0] + FM_CW / 2} V${k.top}` });
-    } else {   // de la tarjeta a sus padres (arriba)
-      const i = node.unit.members.indexOf(k.unit.of), my = top - FM_VG / 2, up = k.top + FM_CH;
-      lines.push({ cls: '', d: `M${cx(Math.max(0, i))},${top} V${my} H${kx} V${k.unit.members.length > 1 ? up - FM_CH / 2 : up}` });
-    }
-  });
-}
+// Filas por generación; parejas juntas en una unidad; orden y posición por baricentros (padres ↔ hijos), varias pasadas
 function fmTree(focus) {
-  const ps = fmParents(focus);
-  const root = ps.length ? { members: ps, root: true } : { members: [focus, ...fmPartners(focus)] };
-  const downKids = u => (u.root ? [...new Set(u.members.flatMap(fmChildren))] : fmChildren(u.members[0])).map(c => ({ members: [c, ...fmPartners(c)] }));
-  const upKids = u => u.members.map(m => ({ members: fmParents(m), of: m })).filter(x => x.members.length);
-  const cards = [], lines = [];
-  const down = fmLayout(root, downKids, 0, ps.length ? 3 : 2);
-  fmPlace(down, -down.w / 2, 0, 1, cards, lines);
-  if (ps.length) {
-    const up = fmLayout({ ...root, skipRoot: true }, upKids, 0, 3);
-    fmPlace(up, -up.w / 2, 0, -1, cards, lines);
+  const set = fmFamilySet(focus), gen = { [focus]: 0 }, order = [focus];
+  for (let i = 0; i < order.length; i++) {
+    const x = order[i];
+    for (const [y, d] of [...fmPartners(x).map(p => [p, 0]), ...fmParents(x).map(p => [p, -1]), ...fmChildren(x).map(c => [c, 1])])
+      if (set.has(y) && gen[y] === undefined) { gen[y] = gen[x] + d; order.push(y); }
   }
+  const STEP = FM_CW + FM_HG, unitOf = {}, rows = {};
+  order.forEach(id => {
+    if (unitOf[id]) return;
+    const u = { m: [id], g: gen[id], x: 0 }, st = [id];
+    unitOf[id] = u;
+    while (st.length) for (const p of fmPartners(st.pop())) if (gen[p] === u.g && !unitOf[p]) { unitOf[p] = u; u.m.push(p); st.push(p); }
+    if (u.m.length > 2) {   // quien tiene más parejas al centro, una a cada lado
+      const c = u.m.reduce((b, id) => fmPartners(id).length > fmPartners(b).length ? id : b), rest = u.m.filter(id => id !== c);
+      u.m = [rest[0], c, ...rest.slice(1)];
+    }
+    u.w = u.m.length * FM_CW + (u.m.length - 1) * FM_HG;
+    (rows[u.g] ||= []).push(u);
+  });
+  const gens = Object.keys(rows).map(Number).sort((a, b) => a - b), R = gens.map(g => rows[g]);
+  const avg = v => v.reduce((a, b) => a + b, 0) / v.length;
+  const pos = id => { const u = unitOf[id]; return u.x + u.m.indexOf(id) * STEP + FM_CW / 2; };
+  const inSet = ids => ids.filter(id => unitOf[id]);
+  const place = (row, want) => {   // respeta el orden y la separación mínima, lo más cerca posible de lo deseado
+    row.forEach((u, i) => u.want = want(u) ?? u.x);
+    row.sort((p, q) => (p.want + p.w / 2) - (q.want + q.w / 2));
+    const a = [], b = [], n = row.length;
+    row.forEach((u, i) => a[i] = i ? Math.max(u.want, a[i - 1] + row[i - 1].w + FM_UG) : u.want);
+    for (let i = n - 1; i >= 0; i--) b[i] = i < n - 1 ? Math.min(row[i].want, b[i + 1] - row[i].w - FM_UG) : row[i].want;
+    row.forEach((u, i) => u.x = (a[i] + b[i]) / 2);
+  };
+  const fromParents = u => {
+    if (u.m.length === 2) {   // la pareja que entra a la familia va al lado contrario de los padres de la otra
+      const pl = u.m.map(id => { const ps = inSet(fmParents(id)); return ps.length ? avg(ps.map(pos)) : null; });
+      const c = u.x + u.w / 2;
+      if (pl[0] !== null && pl[1] !== null ? pl[0] > pl[1] : pl[0] === null ? pl[1] !== null && pl[1] <= c : pl[0] > c) u.m.reverse();
+    }
+    const v = [];
+    u.m.forEach((id, i) => { const ps = inSet(fmParents(id)); if (ps.length) v.push(avg(ps.map(pos)) - i * STEP - FM_CW / 2); });
+    return v.length ? avg(v) : null;
+  };
+  const fromKids = u => {
+    const v = [];
+    new Set(u.m.flatMap(fmChildren)).forEach(c => {
+      if (!unitOf[c]) return;
+      const idx = u.m.map((id, i) => fmParents(c).includes(id) ? i : -1).filter(i => i >= 0);
+      v.push(pos(c) - avg(idx.map(i => i * STEP + FM_CW / 2)));
+    });
+    return v.length ? avg(v) : null;
+  };
+  R.forEach(row => { let x = 0; row.forEach(u => { u.x = x; x += u.w + FM_UG; }); });
+  for (let it = 0; it < 12; it++) {
+    R.forEach(row => place(row, fromParents));
+    [...R].reverse().forEach(row => place(row, fromKids));
+  }
+  R.forEach(row => place(row, fromParents));
+  const top = g => (g - gens[0]) * (FM_CH + FM_VG);
+  const cards = [], lines = [];
+  R.forEach(row => row.forEach(u => u.m.forEach((id, i) => {
+    cards.push({ id, x: u.x + i * STEP, y: top(u.g) });
+    const k = i && fmLinked(u.m[i - 1], id);   // línea de pareja entre tarjetas vecinas
+    if (k?.type === 'couple') lines.push({ cls: 'couple' + (fmEnded(k) ? ' ended' : ''), d: `M${u.x + (i - 1) * STEP + FM_CW},${top(u.g) + FM_CH / 2} H${u.x + i * STEP}` });
+  })));
+  // Hijos: una barra por grupo de hermanos (mismos padres), levemente desplazadas para no confundirse
+  const groups = {};
+  order.forEach(c => { const ps = inSet(fmParents(c)).sort(); if (ps.length) (groups[ps.join()] ||= { ps, kids: [] }).kids.push(c); });
+  const lane = {};
+  Object.values(groups).forEach(({ ps, kids }) => {
+    const g = gen[kids[0]], n = lane[g] = (lane[g] ?? -1) + 1, my = top(g) - FM_VG / 2 + ((n % 3) - 1) * 7;
+    const pu = unitOf[ps[0]], together = ps.length === 2 && pu === unitOf[ps[1]] && Math.abs(pu.m.indexOf(ps[0]) - pu.m.indexOf(ps[1])) === 1;
+    const from = together ? [[avg(ps.map(pos)), top(pu.g) + FM_CH / 2]] : ps.map(p => [pos(p), top(gen[p]) + FM_CH]);
+    from.forEach(([px, py]) => kids.forEach(c => lines.push({ cls: '', d: `M${px},${py} V${my} H${pos(c)} V${top(gen[c])}` })));
+  });
   return { cards, lines };
 }
 function fmTreeHtml() {
@@ -4735,7 +4788,7 @@ function fmNetHtml() {
   const edge = k => {
     const a = P[k.a], b = P[k.b];
     if (!a || !b) return '';
-    const cls = k.type === 'couple' ? 'couple' + (k.status === 'separados' ? ' ended' : '') : k.type === 'friend' ? 'friend' : '';
+    const cls = k.type === 'couple' ? 'couple' + (fmEnded(k) ? ' ended' : '') : k.type === 'friend' ? 'friend' : '';
     return `<line class="fm-line ${cls} ${hl?.edges.has(k.id) ? 'hl' : ''}" data-k="${k.id}" x1="${a[0] + ox}" y1="${a[1] + oy}" x2="${b[0] + ox}" y2="${b[1] + oy}"/>`;
   };
   const node = p => `<div class="fn ${fmSel === p.id ? 'sel' : ''} ${hl?.nodes.has(p.id) ? 'hl' : ''}" data-fm="${p.id}" style="left:${P[p.id][0] + ox}px;top:${P[p.id][1] + oy}px;--fc:${fmColor(p)}">
@@ -4852,10 +4905,10 @@ function fmKinship(a, b) {
   if (!route) return null;
   const A = fmP(a), sx = A.sex, steps = route.slice(1).map(r => r.step).join(''), w = (m, f) => fmG(sx, m, f);
   const couples = route.slice(1).filter(r => r.step === 'S').map((r, i) => fmLinked(route[route.indexOf(r) - 1].id, r.id));
-  const ex = couples.some(k => k?.status === 'separados') ? 'ex ' : '';
+  const ex = couples.some(fmEnded) ? 'ex ' : '';
   const direct = {   // afinidad: nombres propios para caminos cortos
     S: () => { const st = FM_COUPLE[couples[0]?.status] || FM_COUPLE.casados; return st === FM_COUPLE.separados ? 'ex pareja' : w(st[1], st[2]); },
-    F: () => w('amigo', 'amiga'),
+    F: () => fmFriendWord(fmLinked(a, b), sx),
     SU: () => ex + w('yerno', 'nuera'), DS: () => ex + w('suegro', 'suegra'),
     SUD: () => ex + w('cuñado', 'cuñada'), UDS: () => ex + w('cuñado', 'cuñada'), SUDS: () => ex + w('concuñado', 'concuñada'),
     DSU: () => ex + w('consuegro', 'consuegra'), US: () => w('hijastro', 'hijastra'), SD: () => fmG(sx, 'padrastro', 'madrastra'), USD: () => w('hermanastro', 'hermanastra'),
@@ -4875,7 +4928,7 @@ function fmKinship(a, b) {
     const from = route[i].id, s = route[i + 1].step;
     if (s === 'S' || s === 'F') {
       const p = fmP(from), k = fmLinked(from, route[i + 1].id), st = FM_COUPLE[k?.status] || FM_COUPLE.casados;
-      hops.push({ from, to: route[i + 1].id, word: s === 'F' ? fmG(p.sex, 'amigo', 'amiga') : st === FM_COUPLE.separados ? 'ex pareja' : fmG(p.sex, st[1], st[2]) });
+      hops.push({ from, to: route[i + 1].id, word: s === 'F' ? fmFriendWord(k, p.sex) : st === FM_COUPLE.separados ? 'ex pareja' : fmG(p.sex, st[1], st[2]) });
       i++; continue;
     }
     let g = 0, h = 0, j = i;
@@ -5023,15 +5076,15 @@ function fmPersonModal(p = null, opts = {}) {
   const rel = [];
   if (p) {
     fmParents(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === id && k.b === p.id), fmG(fmP(id).sex, 'Padre', 'Madre'), id]));
-    fmCouples(p.id).forEach(k => rel.push([k, `Pareja · ${(FM_COUPLE[k.status] || FM_COUPLE.casados)[0]}`, k.a === p.id ? k.b : k.a]));
+    fmCouples(p.id).forEach(k => rel.push([k, 'Pareja', k.a === p.id ? k.b : k.a, FM_COUPLE, k.status || 'casados']));
     fmChildren(p.id).forEach(id => rel.push([S.kin.find(k => k.type === 'parent' && k.a === p.id && k.b === id), fmG(fmP(id).sex, 'Hijo', 'Hija'), id]));
-    fmFriends(p.id).forEach(id => rel.push([fmLinked(p.id, id), fmG(fmP(id).sex, 'Amigo', 'Amiga'), id]));
+    fmFriends(p.id).forEach(id => { const k = fmLinked(p.id, id); rel.push([k, 'Amistad', id, FM_FRIEND, k.kind || 'amigos']); });
   }
   const sibs = p ? fmSiblings(p.id) : [];
   openModal(p ? fmFull(p) : 'Nueva persona', `${fmFieldsHtml(x)}
     <label class="toggle"><input type="checkbox" name="me" ${p && p.id === S.meId || opts.me ? 'checked' : ''}> <span>Esta persona soy yo</span></label>
     ${p ? `<h3 class="sub-h">Vínculos</h3>
-      ${rel.length || sibs.length ? `<ul class="list plain fm-rels">${rel.filter(r => r[0]).map(([k, l, id]) => `<li class="pr"><span class="pr-t"><small>${l}</small> ${esc(fmFull(fmP(id)))}</span><button type="button" class="icon-btn" data-unlink="${k.id}" title="Quitar vínculo" aria-label="Quitar vínculo">${ic('x')}</button></li>`).join('')}
+      ${rel.length || sibs.length ? `<ul class="list plain fm-rels">${rel.filter(r => r[0]).map(([k, l, id, opts, cur]) => `<li class="pr"><span class="pr-t"><small>${l}</small> ${esc(fmFull(fmP(id)))}</span>${opts ? `<select class="inp fm-kst" data-kst="${k.id}" aria-label="Tipo de vínculo">${Object.entries(opts).map(([v, [n]]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}<button type="button" class="icon-btn" data-unlink="${k.id}" title="Quitar vínculo" aria-label="Quitar vínculo">${ic('x')}</button></li>`).join('')}
         ${sibs.map(id => `<li class="pr"><span class="pr-t"><small>${fmG(fmP(id).sex, 'Hermano', 'Hermana')}</small> ${esc(fmFull(fmP(id)))}</span></li>`).join('')}</ul>` : '<p class="hint">Sin vínculos todavía.</p>'}
       <button type="button" class="btn btn-sm" data-addrel>${ic('plus')} Familiar o amistad</button>` : ''}`, {
     onSave: fd => {
@@ -5055,6 +5108,10 @@ function fmPersonModal(p = null, opts = {}) {
     } : null,
     onOpen: f => {
       fmFieldsBind(f, ph);
+      $$('[data-kst]', f).forEach(sel => sel.onchange = () => {
+        const k = S.kin.find(x => x.id === sel.dataset.kst); if (!k) return;
+        k[k.type === 'couple' ? 'status' : 'kind'] = sel.value; save(); renderAll();
+      });
       $$('[data-unlink]', f).forEach(b => b.onclick = () => {
         if (!confirm('¿Quitar este vínculo?')) return;
         S.kin = S.kin.filter(k => k.id !== b.dataset.unlink); fmPath = null;
@@ -5083,24 +5140,26 @@ const fmViaCands = (st, from, y, ys) => from === 'new' ? [] : st === 'U' ? fmPar
 function fmAddModal(base, type = 'parent') {
   const ps = fmParents(base.id), partners = fmPartners(base.id), others = fmSorted().filter(p => p.id !== base.id);
   const ph = { id: null };
-  const T = [['parent', 'Padre o madre'], ['couple', 'Pareja'], ['child', 'Hijo o hija'], ['sibling', 'Hermano o hermana'], ['friend', 'Amistad']];
-  const TC = Object.entries(FM_CHAINS).map(([k, [l]]) => [k, l]);
+  const TF = [['parent', 'Padre o madre'], ['child', 'Hijo o hija'], ['sibling', 'Hermano o hermana']];
+  const TP = [['c:casados', 'Esposo o esposa'], ['c:pololos', 'Pololo o polola (novio o novia)'], ['c:exesposos', 'Ex esposo o ex esposa'], ['c:expololos', 'Ex pololo o ex polola (ex novio o novia)'], ['c:separados', 'Ex pareja (separados)']];
+  const TA = Object.entries(FM_FRIEND).map(([k, [, m, w]]) => ['f:' + k, `${m[0].toUpperCase() + m.slice(1)} o ${w}`]);
+  const TC = Object.entries(FM_CHAINS).map(([k, [l]]) => [k, l]), T = [...TF, ...TP, ...TA];
   const opt = ([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`;
   openModal(`Vínculo de ${fmShort(base)}`, `
-    <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type"><optgroup label="Directos">${T.map(opt).join('')}</optgroup><optgroup label="Por medio de otra persona">${TC.map(opt).join('')}</optgroup></select></label>
+    <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type"><optgroup label="Familia">${TF.map(opt).join('')}</optgroup><optgroup label="Pareja">${TP.map(opt).join('')}</optgroup><optgroup label="Amistad y otros">${TA.map(opt).join('')}</optgroup><optgroup label="Por medio de otra persona">${TC.map(opt).join('')}</optgroup></select></label>
     <div class="fm-chain-f" data-chain hidden></div>
     ${others.length ? `<div class="seg" style="margin-bottom:12px"><button type="button" class="on" data-who="new">Persona nueva</button><button type="button" data-who="old">Ya está en la lista</button></div>` : ''}
     <input type="hidden" name="who" value="new">
     <div data-new>${fmFieldsHtml(FM_BLANK(), false)}</div>
     <label class="fld" data-old hidden><span>Persona</span><select name="other">${others.map(p => `<option value="${p.id}">${esc(fmFull(p))}</option>`).join('')}</select></label>
-    <label class="fld" data-for="couple inlawB childInLaw"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="fld" data-for="inlawB childInLaw"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
     <label class="fld" data-for="child"><span>¿Con quién?</span><select name="with"><option value="">Nadie o no sé</option>${partners.map(id => `<option value="${id}">${esc(fmFull(fmP(id)))}</option>`).join('')}</select></label>
     ${ps.length === 1 ? `<label class="toggle" data-for="parent"><input type="checkbox" name="pair" checked> <span>Es pareja de ${esc(fmFull(fmP(ps[0])))}</span></label>` : ''}
     <div data-for="sibling">${ps.length ? `<p class="hint">Comparten:</p>${ps.map(id => `<label class="toggle" style="margin-right:14px"><input type="checkbox" name="sp" value="${id}" checked> <span>${esc(fmShort(fmP(id)))}</span></label>`).join('')}`
       : `<p class="modal-err" style="display:block">Para agregar hermanos, primero agrega al menos a uno de los padres de ${esc(fmShort(base))}.</p>`}</div>`, {
     saveLabel: 'Agregar',
     onSave: fd => {
-      const t = fd.get('type'), isNew = fd.get('who') === 'new';
+      const t0 = fd.get('type'), t = t0.startsWith('c:') ? 'couple' : t0.startsWith('f:') ? 'friend' : t0, isNew = fd.get('who') === 'new';
       if (t === 'sibling' && !ps.length) return 'Primero agrega al menos a uno de sus padres.';
       if (t === 'parent' && ps.length >= 2) return `${fmShort(base)} ya tiene dos padres anotados.`;
       if (isNew && !fd.get('name').trim()) return 'Escribe el nombre.';
@@ -5147,11 +5206,11 @@ function fmAddModal(base, type = 'parent') {
       }
       if (t === 'parent') { link('parent', o.id, base.id); if (ps.length === 1 && fd.get('pair') === 'on' && !fmLinked(ps[0], o.id)) link('couple', ps[0], o.id, { status: 'casados' }); }
       if (t === 'child') { link('parent', base.id, o.id); const w = fd.get('with'); if (w && !fmParents(o.id).includes(w)) link('parent', w, o.id); }
-      if (t === 'couple') link('couple', base.id, o.id, { status: fd.get('status') });
-      if (t === 'friend') link('friend', base.id, o.id);
+      if (t === 'couple') link('couple', base.id, o.id, { status: t0.slice(2) });
+      if (t === 'friend') link('friend', base.id, o.id, { kind: t0.slice(2) });
       if (t === 'sibling') fd.getAll('sp').forEach(id => { if (!fmParents(o.id).includes(id) && !fmIsAncestor(o.id, id)) link('parent', id, o.id); });
       fmPath = null; save(); renderAll();
-      toast({ title: 'Vínculo agregado', text: `${fmShort(o)} · ${T.concat(TC).find(x => x[0] === t)[1].toLowerCase()} de ${fmShort(base)}`, icon: 'tree' });
+      toast({ title: 'Vínculo agregado', text: `${fmShort(o)} · ${T.concat(TC).find(x => x[0] === t0)[1].toLowerCase()} de ${fmShort(base)}`, icon: 'tree' });
     },
     onOpen: f => {
       // Intermedios: elige a alguien ya anotado o "Persona nueva" (se crea al guardar; el nombre puede quedar vacío)
