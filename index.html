@@ -734,6 +734,21 @@
   .bd-near { color: var(--accent-strong); font-size: 16px; }
   .pr strong { font-variant-numeric: tabular-nums; }
 
+  /* Tareas */
+  .td-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+  .rem-form .td-date { flex: 0 0 auto; }
+  .td { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px dashed var(--line); }
+  .td:last-child { border-bottom: 0; }
+  .td-main { all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; border-radius: 8px; }
+  .td-main:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+  .td-t { font-weight: 600; overflow-wrap: anywhere; }
+  .td.done .td-t { text-decoration: line-through; opacity: .55; }
+  .td-m { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .td-m span { display: inline-flex; align-items: center; gap: 4px; }
+  .td-due.late { color: var(--danger); }
+  .td-due.today { color: var(--accent-strong); }
+  .td-star.on { color: #d9a520; }
+
   /* Ayudas de memoria */
   .ay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ay-boards { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 auto; }
@@ -877,6 +892,7 @@
     <div class="nav-g">Organizar</div>
     <button class="nav-btn nav-fix" data-act="go" data-view="inicio"><span class="ic"><i class="ph-duotone ph-house" aria-hidden="true"></i></span><span>Inicio</span></button>
     <button class="nav-btn nav-fix" data-act="go" data-view="planner"><span class="ic"><i class="ph-duotone ph-calendar-blank" aria-hidden="true"></i></span><span>Planner</span></button>
+    <button class="nav-btn" data-act="go" data-view="tareas"><span class="ic"><i class="ph-duotone ph-list-checks" aria-hidden="true"></i></span><span>Tareas</span></button>
     <button class="nav-btn" data-act="go" data-view="horario"><span class="ic"><i class="ph-duotone ph-clock" aria-hidden="true"></i></span><span>Horario</span></button>
     <button class="nav-btn" data-act="go" data-view="timers"><span class="ic"><i class="ph-duotone ph-timer" aria-hidden="true"></i></span><span>Timers</span></button>
     <button class="nav-btn" data-act="go" data-view="habitos"><span class="ic"><i class="ph-duotone ph-plant" aria-hidden="true"></i></span><span>Hábitos</span></button>
@@ -901,6 +917,7 @@
   <main class="main">
     <section class="view" id="view-inicio"></section>
     <section class="view" id="view-planner" hidden></section>
+    <section class="view" id="view-tareas" hidden></section>
     <section class="view" id="view-horario" hidden></section>
     <section class="view" id="view-timers" hidden></section>
     <section class="view" id="view-habitos" hidden></section>
@@ -1016,6 +1033,7 @@ const defaults = () => ({
   verses: [], verseLog: [], vsMode: 'tarjeta',
   habits: [], habitLog: {},
   memos: [], memoBoards: [], memoBoard: 'general', memoLayout: null,
+  todos: [], todoLists: [], todoList: 'todas',
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1032,8 +1050,10 @@ function normalize(raw) {
   delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
+  if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
+  s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
@@ -1690,6 +1710,8 @@ function renderInicio(root) {
   const countdowns = S.events.filter(e => e.countdown).map(e => ({ e, k: nextOcc(e, k) })).filter(x => x.k)
     .sort((a, b) => a.k.localeCompare(b.k) || byTime(a.e, b.e)).slice(0, 4);
   const nextLesson = S.lessons.filter(l => l.date && l.date >= k && l.status !== 'impartida').sort((a, b) => a.date.localeCompare(b.date))[0];
+  // Tareas: primero las vencidas y de hoy, luego importantes
+  const pendTodos = S.todos.filter(t => !t.done).sort((a, b) => (!!b.due && b.due <= k) - (!!a.due && a.due <= k) || tdSort(a, b));
   root.innerHTML = `
     <header class="hero ${S.bannerId && IMG.get(S.bannerId) ? 'has-img' : ''}">
       <div class="hero-in">
@@ -1726,6 +1748,11 @@ function renderInicio(root) {
         ${nextChurch ? `<div class="next-church">${ic('church')} Próximo: <strong>${esc(nextChurch.e.title)}</strong> · ${shortDate(nextChurch.k)}${nextChurch.e.time ? ' ' + nextChurch.e.time : ''}</div>` : ''}
         ${S.verses.some(vsDue) ? `<div class="next-church">${ic('cards')} ${S.verses.filter(vsDue).length} para repasar hoy · <button class="linkish" data-act="go" data-view="versiculos">Repasar</button></div>` : ''}
         ${nextLesson ? `<div class="next-church">${ic('book-open')} Próxima clase: <strong>${esc(nextLesson.title || 'Sin título')}</strong> · ${shortDate(nextLesson.date)} · ${lessonProgress(nextLesson)}/9 listo</div>` : ''}
+      </section>
+      <section class="card span-12">
+        <div class="card-h"><h2>Tareas</h2>${pendTodos.length ? `<span class="badge">${pendTodos.length}</span>` : ''}<span class="grow"></span><button class="btn btn-sm" data-act="go" data-view="tareas">Ver todas</button></div>
+        <form class="rem-form" data-form="todo"><input class="inp" name="text" required maxlength="200" placeholder="Nueva tarea…" aria-label="Nueva tarea"><button class="btn btn-primary btn-sm">${ic('plus')} Añadir</button></form>
+        ${pendTodos.length ? `<ul class="list plain td-list">${pendTodos.slice(0, 6).map(t => tdItem(t, k, true)).join('')}</ul>${pendTodos.length > 6 ? `<p class="hint">Y ${pendTodos.length - 6} más · <button class="linkish" data-act="go" data-view="tareas">Ver todas</button></p>` : ''}` : empty('Sin tareas pendientes', 'sparkle')}
       </section>
       ${S.habits.length ? `<section class="card span-12"><div class="card-h"><h2>Hábitos de hoy</h2><button class="btn btn-sm" data-act="go" data-view="habitos">Ver todos</button></div>
         <div class="hb-chips">${S.habits.filter(h => hbScheduled(h, now)).map(h => {
@@ -2904,7 +2931,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -3854,6 +3881,114 @@ Object.assign(INP, {
   memoFilter: el => { memoQuery = el.value; memoApplyFilter($('#view-ayudas')); },
 });
 
+/* ---------- Tareas ---------- */
+// S.todos = [{ id, list, text, notes, due, star, done, doneOn, created }]; S.todoLists = [{ id, name }] ('general' fija, no se borra)
+// S.todoList = vista elegida (local): 'todas' | 'hoy' | 'importantes' | id de lista
+const TD_VIEWS = [['todas', 'Todas', 'list-checks'], ['hoy', 'Hoy', 'sun'], ['importantes', 'Importantes', 'star']];
+const tdView = () => TD_VIEWS.some(v => v[0] === S.todoList) || findById(S.todoLists, S.todoList) ? S.todoList : 'todas';
+const tdSort = (a, b) => (b.star - a.star) || (a.due || '9999').localeCompare(b.due || '9999') || (a.created || 0) - (b.created || 0);
+function tdMatch(t, v, k) {
+  if (v === 'todas') return true;
+  if (v === 'hoy') return !!t.due && t.due <= k && (!t.done || t.doneOn === k);
+  if (v === 'importantes') return t.star;
+  return t.list === v;
+}
+function tdItem(t, k, showList) {
+  const n = t.due ? Math.round((fromYmd(t.due) - fromYmd(k)) / 864e5) : null, late = n < 0 && !t.done;
+  const due = n == null ? '' : late ? 'Venció ' + shortDate(t.due) : n === 0 ? 'Hoy' : n === 1 ? 'Mañana' : shortDate(t.due);
+  const meta = [due && `<span class="td-due ${late ? 'late' : n === 0 ? 'today' : ''}">${ic('calendar-blank')} ${due}</span>`,
+    showList && S.todoLists.length > 1 && `<span>${ic('list-bullets')} ${esc(findById(S.todoLists, t.list)?.name || 'General')}</span>`,
+    t.notes && `<span>${ic('note')} Notas</span>`].filter(Boolean).join('');
+  return `<li class="td ${t.done ? 'done' : ''}" data-id="${t.id}">
+    <input type="checkbox" class="chk" data-chg="tdDone" data-id="${t.id}" ${t.done ? 'checked' : ''} aria-label="Marcar como hecha">
+    <button class="td-main" data-act="tdEdit" data-id="${t.id}"><span class="td-t">${esc(t.text)}</span>${meta ? `<span class="td-m">${meta}</span>` : ''}</button>
+    <button class="icon-btn td-star ${t.star ? 'on' : ''}" data-act="tdStar" data-id="${t.id}" aria-pressed="${t.star}" title="Importante" aria-label="Importante">${ic('star', t.star ? 'fill' : '')}</button></li>`;
+}
+function renderTareas(root) {
+  const k = ymd(new Date()), v = tdView(), list = findById(S.todoLists, v);
+  const wasOpen = $('details.td-done', root)?.open;
+  const all = S.todos.filter(t => tdMatch(t, v, k));
+  const up = all.filter(t => !t.done).sort(tdSort), done = all.filter(t => t.done).sort((a, b) => (b.doneOn || '').localeCompare(a.doneOn || ''));
+  const pend = S.todos.filter(t => !t.done), late = pend.filter(t => t.due && t.due < k).length;
+  const tab = (id, label, icon) => {
+    const n = S.todos.filter(t => !t.done && tdMatch(t, id, k)).length;
+    return `<button class="ay-tab ${v === id ? 'on' : ''}" data-act="tdView" data-v="${id}" aria-pressed="${v === id}">${icon ? ic(icon) + ' ' : ''}${esc(label)}${n ? ` <small>${n}</small>` : ''}</button>`;
+  };
+  const none = v === 'hoy' ? ['Nada vence hoy', 'sun'] : v === 'importantes' ? ['Marca con la estrella lo importante', 'star'] : [done.length ? '¡Todo listo!' : 'Escribe tu primera tarea arriba', 'sparkle'];
+  root.innerHTML = `
+    <div class="page-h"><div><h1>Tareas</h1><p class="sub">${pend.length ? `${pend.length} ${pend.length === 1 ? 'pendiente' : 'pendientes'}${late ? ` · ${late} ${late === 1 ? 'vencida' : 'vencidas'}` : ''}` : 'Todo al día'}</p></div></div>
+    <div class="ay-bar"><div class="ay-boards">${TD_VIEWS.map(([id, l, i]) => tab(id, l, i)).join('')}<span class="td-sep" aria-hidden="true"></span>${S.todoLists.map(l => tab(l.id, l.name)).join('')}
+      <button class="icon-btn" data-act="tdListAdd" title="Nueva lista" aria-label="Nueva lista">${ic('plus')}</button>
+      ${list ? `<button class="icon-btn" data-act="tdListEdit" title="Renombrar o eliminar esta lista" aria-label="Renombrar o eliminar esta lista">${ic('pencil-simple')}</button>` : ''}</div></div>
+    <section class="card">
+      <form class="rem-form" data-form="todo" data-list="${list ? list.id : 'general'}" data-star="${v === 'importantes' ? 1 : ''}">
+        <input class="inp" name="text" required maxlength="200" placeholder="${list ? `Añadir a ${esc(list.name)}…` : 'Nueva tarea…'}" aria-label="Nueva tarea">
+        <input class="inp td-date" type="date" name="due" value="${v === 'hoy' ? k : ''}" title="Fecha límite (opcional)" aria-label="Fecha límite (opcional)">
+        <button class="btn btn-primary btn-sm">${ic('plus')} Añadir</button></form>
+      ${up.length ? `<ul class="list plain td-list">${up.map(t => tdItem(t, k, !list)).join('')}</ul>` : empty(...none)}
+      ${done.length ? `<details class="past td-done" ${wasOpen ? 'open' : ''}><summary>Hechas (${done.length})</summary><ul class="list plain td-list">${done.map(t => tdItem(t, k, !list)).join('')}</ul><button class="btn btn-sm" data-act="tdClear">Limpiar hechas</button></details>` : ''}
+    </section>`;
+}
+function tdModal(t) {
+  openModal('Tarea', `
+    <label class="fld"><span>Tarea</span><input name="text" required maxlength="200" value="${esc(t.text)}"></label>
+    <div class="row2">
+      <label class="fld"><span>Lista</span><select name="list">${S.todoLists.map(l => `<option value="${l.id}" ${l.id === t.list ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
+      <label class="fld"><span>Fecha límite</span><input type="date" name="due" value="${t.due || ''}"></label>
+    </div>
+    <label class="toggle"><input type="checkbox" name="star" ${t.star ? 'checked' : ''}> <span>Importante</span></label>
+    <label class="fld"><span>Notas</span><textarea name="notes" rows="3" placeholder="Detalles, links, lo que necesites…">${esc(t.notes)}</textarea></label>`, {
+    onSave: fd => {
+      Object.assign(t, { text: fd.get('text').trim(), list: fd.get('list'), due: fd.get('due'), star: fd.get('star') === 'on', notes: fd.get('notes').trim() });
+      save(); renderAll();
+    },
+    onDelete: () => { S.todos = S.todos.filter(x => x !== t); save(); renderAll(); },
+  });
+}
+function tdListModal(l = null) {
+  const n = l ? S.todos.filter(t => t.list === l.id).length : 0;
+  openModal(l ? 'Lista' : 'Nueva lista', `
+    <label class="fld"><span>Nombre</span><input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="Ej.: Compras, Casa, Trabajo…"></label>
+    ${l ? `<p class="hint">${l.id === 'general' ? 'General es la lista principal: se puede renombrar, pero no eliminar.' : n ? `Eliminar la lista borra también ${n === 1 ? 'su tarea' : `sus ${n} tareas`}.` : 'La lista está vacía.'}</p>` : ''}`, {
+    onSave: fd => {
+      const name = fd.get('name').trim();
+      if (l) l.name = name;
+      else { const nl = { id: uid(), name }; S.todoLists.push(nl); S.todoList = nl.id; }
+      save(); renderAll();
+    },
+    onDelete: l && l.id !== 'general' ? () => {
+      S.todoLists = S.todoLists.filter(x => x !== l);
+      S.todos = S.todos.filter(t => t.list !== l.id);
+      S.todoList = 'todas'; save(); renderAll();
+    } : null,
+  });
+}
+Object.assign(ACT, {
+  tdView: el => { S.todoList = el.dataset.v; save(); renderAll(); },
+  tdListAdd: () => tdListModal(),
+  tdListEdit: () => { const l = findById(S.todoLists, S.todoList); l && tdListModal(l); },
+  tdEdit: el => { const t = findById(S.todos, el.dataset.id); t && tdModal(t); },
+  tdStar: el => { const t = findById(S.todos, el.dataset.id); if (t) { t.star = !t.star; save(); renderAll(); } },
+  tdClear: () => {
+    const k = ymd(new Date()), v = tdView();
+    if (!confirm('¿Borrar las tareas hechas de esta vista?')) return;
+    S.todos = S.todos.filter(t => !t.done || !tdMatch(t, v, k)); save(); renderAll();
+  },
+});
+Object.assign(CHG, {
+  tdDone: el => { const t = findById(S.todos, el.dataset.id); if (t) { t.done = el.checked; t.doneOn = el.checked ? ymd(new Date()) : null; save(); renderAll(); } },
+});
+Object.assign(FORMS, {
+  todo: f => {
+    const text = f.elements.text.value.trim();
+    if (!text) return;
+    S.todos.push({ id: uid(), list: findById(S.todoLists, f.dataset.list) ? f.dataset.list : 'general', text, notes: '',
+      due: f.elements.due?.value || '', star: f.dataset.star === '1', done: false, doneOn: null, created: Date.now() });
+    save(); renderAll();
+    $(`#view-${current} [data-form="todo"] [name="text"]`)?.focus();   // seguir anotando sin volver a tocar el campo
+  },
+});
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -4245,7 +4380,7 @@ Object.assign(ACT, {
 // antes de recibir la primera foto de la nube: así un dispositivo con datos viejos no pisa la nube.
 const FB_V = '10.14.1';
 const SYNC_KEY = 'convalaria-sync';
-const LOCAL_KEYS = ['lastView', 'plannerView', 'showBlocks', 'memoBoard', 'memoLayout'];
+const LOCAL_KEYS = ['lastView', 'plannerView', 'showBlocks', 'memoBoard', 'memoLayout', 'todoList'];
 const SYNC_KEYS = Object.keys(defaults()).filter(k => !LOCAL_KEYS.includes(k));
 let syncMeta = (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch { return {}; } })();
 if (!syncMeta.device) syncMeta.device = uid();
@@ -4577,6 +4712,8 @@ function flash(id) {
 const searchSources = () => [
   { label: 'Actividades', icon: 'calendar-blank', items: () => S.events.map(e => ({ title: e.title, sub: `${isRep(e) ? repLabel(e) : e.date ? shortDate(e.date) : 'Algún día'}${e.time ? ' · ' + e.time : ''} · ${cat(e.cat).label}`, fields: [e.title, e.notes, ...evSub(e).map(s => s.text)],
       open: () => { const k = isRep(e) ? nextOcc(e, ymd(new Date())) || e.date : e.date; if (k) { pDate = fromYmd(k); S.plannerView = 'dia'; } go('planner'); eventModal(e); } })) },
+  { label: 'Tareas', icon: 'list-checks', items: () => S.todos.map(t => ({ title: t.text, sub: [findById(S.todoLists, t.list)?.name || 'General', t.due ? shortDate(t.due) : '', t.done ? 'Hecha' : 'Pendiente'].filter(Boolean).join(' · '),
+      fields: [t.text, t.notes], open: () => { S.todoList = t.list; go('tareas'); tdModal(t); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
@@ -4624,7 +4761,7 @@ const searchSources = () => [
 function runSearch(q) {
   const box = $('#srResults'), toks = sNorm(q).trim().split(/\s+/).filter(Boolean);
   searchRes = []; searchActive = 0;
-  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
+  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, tareas, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
   let html = '';
   for (const src of searchSources()) {
     const hits = [];
