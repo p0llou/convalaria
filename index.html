@@ -870,6 +870,9 @@
   .fm-chip small { color: var(--muted); }
   .fm-chip.on { border-color: var(--fc); box-shadow: inset 0 0 0 1px var(--fc); }
   .fm-church { width: auto; padding: 6px 10px; }
+  .fm-chain-f { margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: var(--accent-softer); }
+  .fm-chain-f .hint { margin: 0 0 6px; }
+  .fm-via + .fm-via { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .fm-role-add { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
   .fm-role-add .inp { flex: 1; min-width: 0; }
   .fm-subs { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 2px 12px; border-left: 3px solid var(--accent-softer); }
@@ -4859,6 +4862,12 @@ function fmKinship(a, b) {
   };
   const nm = id => `<strong>${esc(fmShort(fmP(id)))}</strong>`;
   if (direct[steps]) return { text: `${nm(a)} es ${direct[steps]()} de ${nm(b)}.`, path: route.map(r => r.id), hops: [{ from: a, to: b, word: direct[steps]() }] };
+  // Políticos: pareja de un pariente de sangre o pariente de sangre de la pareja (tío político, prima política…)
+  const pol = /^S(U*D*)$/.exec(steps) || /^(U*D*)S$/.exec(steps);
+  if (pol?.[1]) {
+    const word = `${ex}${fmBlood(pol[1].split('U').length - 1, pol[1].split('D').length - 1, sx)} ${w('político', 'política')}`;
+    return { text: `${nm(a)} es ${word} de ${nm(b)}.`, path: route.map(r => r.id), hops: [{ from: a, to: b, word }] };
+  }
   // Tramos: sangre (subir y luego bajar), pareja o amistad
   const hops = [];
   let i = 0;
@@ -5056,17 +5065,35 @@ function fmPersonModal(p = null, opts = {}) {
     },
   });
 }
+// Parientes que se agregan por medio de otras personas: via = pasos desde la persona base (U padre/madre, D hijo/a, S pareja)
+// hasta quien los une; last = paso final hasta la persona nueva. Los intermedios que falten se crean (nombre opcional).
+const FM_CHAINS = {
+  grand: ['Abuelo o abuela', [['U', 'Padre o madre']], 'U'],
+  grandkid: ['Nieto o nieta', [['D', 'Hijo o hija']], 'D'],
+  uncle: ['Tío o tía', [['U', 'Padre o madre'], ['U', 'Abuelo o abuela']], 'D'],
+  nephew: ['Sobrino o sobrina', [['U', 'Padre o madre'], ['D', 'Hermano o hermana']], 'D'],
+  cousin: ['Primo o prima', [['U', 'Padre o madre'], ['U', 'Abuelo o abuela'], ['D', 'Tío o tía']], 'D'],
+  inlawS: ['Cuñado o cuñada (hermano o hermana de su pareja)', [['S', 'Pareja'], ['U', 'Suegro o suegra']], 'D'],
+  inlawB: ['Cuñado o cuñada (pareja de su hermano o hermana)', [['U', 'Padre o madre'], ['D', 'Hermano o hermana']], 'S'],
+  parentInLaw: ['Suegro o suegra', [['S', 'Pareja']], 'U'],
+  childInLaw: ['Yerno o nuera', [['D', 'Hijo o hija']], 'S'],
+};
+// Candidatos para un paso desde "from"; un hijo después de subir (hermano de y) no puede ser y
+const fmViaCands = (st, from, y, ys) => from === 'new' ? [] : st === 'U' ? fmParents(from) : st === 'S' ? fmPartners(from) : fmChildren(from).filter(id => !(ys === 'U' && id === y));
 function fmAddModal(base, type = 'parent') {
   const ps = fmParents(base.id), partners = fmPartners(base.id), others = fmSorted().filter(p => p.id !== base.id);
   const ph = { id: null };
   const T = [['parent', 'Padre o madre'], ['couple', 'Pareja'], ['child', 'Hijo o hija'], ['sibling', 'Hermano o hermana'], ['friend', 'Amistad']];
+  const TC = Object.entries(FM_CHAINS).map(([k, [l]]) => [k, l]);
+  const opt = ([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`;
   openModal(`Vínculo de ${fmShort(base)}`, `
-    <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type">${T.map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="fld"><span>¿Quién es para ${esc(fmShort(base))}?</span><select name="type"><optgroup label="Directos">${T.map(opt).join('')}</optgroup><optgroup label="Por medio de otra persona">${TC.map(opt).join('')}</optgroup></select></label>
+    <div class="fm-chain-f" data-chain hidden></div>
     ${others.length ? `<div class="seg" style="margin-bottom:12px"><button type="button" class="on" data-who="new">Persona nueva</button><button type="button" data-who="old">Ya está en la lista</button></div>` : ''}
     <input type="hidden" name="who" value="new">
     <div data-new>${fmFieldsHtml(FM_BLANK(), false)}</div>
     <label class="fld" data-old hidden><span>Persona</span><select name="other">${others.map(p => `<option value="${p.id}">${esc(fmFull(p))}</option>`).join('')}</select></label>
-    <label class="fld" data-for="couple"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="fld" data-for="couple inlawB childInLaw"><span>Estado</span><select name="status">${Object.entries(FM_COUPLE).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
     <label class="fld" data-for="child"><span>¿Con quién?</span><select name="with"><option value="">Nadie o no sé</option>${partners.map(id => `<option value="${id}">${esc(fmFull(fmP(id)))}</option>`).join('')}</select></label>
     ${ps.length === 1 ? `<label class="toggle" data-for="parent"><input type="checkbox" name="pair" checked> <span>Es pareja de ${esc(fmFull(fmP(ps[0])))}</span></label>` : ''}
     <div data-for="sibling">${ps.length ? `<p class="hint">Comparten:</p>${ps.map(id => `<label class="toggle" style="margin-right:14px"><input type="checkbox" name="sp" value="${id}" checked> <span>${esc(fmShort(fmP(id)))}</span></label>`).join('')}`
@@ -5085,24 +5112,70 @@ function fmAddModal(base, type = 'parent') {
         if (t === 'child' && fmParents(otherId).length >= 2) return 'Esa persona ya tiene dos padres anotados.';
         if ((t === 'couple' || t === 'friend') && fmLinked(base.id, otherId)) return 'Ya tienen un vínculo.';
       }
+      const np = S.people.length, nk = S.kin.length, undo = msg => { S.people.length = np; S.kin.length = nk; return msg; };
       let o = otherId && fmP(otherId);
       if (!o) {
         o = { id: uid(), created: Date.now(), ...fmFieldsData(fd, ph.id) };
         S.people.push(o);
       } else if (ph.id) imgStore.del(ph.id);
       const link = (type, a, b, extra = {}) => { if (!fmLinked(a, b) || type === 'parent') S.kin.push({ id: uid(), type, a, b, ...extra }); };
+      const C = FM_CHAINS[t];
+      if (C) {
+        // Une "to" con "from" según el paso; un hijo después de subir es hermano de y: comparte sus padres
+        const join = (st, from, y, ys, to) => {
+          if (st === 'U') { if (fmParents(from).includes(to)) return; if (fmParents(from).length >= 2) return `${fmShort(fmP(from))} ya tiene dos padres anotados.`; link('parent', to, from); }
+          else if (st === 'S') { if (fmLinked(from, to)) return 'Ya tienen un vínculo.'; link('couple', from, to, { status: fd.get('status') || 'casados' }); }
+          else {
+            (ys === 'U' ? fmParents(y) : [from]).forEach(id => { if (!fmParents(to).includes(id) && fmParents(to).length < 2) link('parent', id, to); });
+            if (!fmParents(to).includes(from)) return 'Esa persona ya tiene dos padres anotados.';
+          }
+        };
+        const chain = [base.id];
+        let prev = base.id, y = null, ys = null;
+        for (const [i, [st]] of C[1].entries()) {
+          let v = fd.get('via' + i) || 'new';
+          if (v === 'new') {
+            const p = { id: uid(), created: Date.now(), ...FM_BLANK(), name: (fd.get('vianame' + i) || '').trim() || 'Sin nombre', last1: (fd.get('vialast' + i) || '').trim(), sex: fd.get('viasex' + i) || '' };
+            S.people.push(p); v = p.id;
+            const e = join(st, prev, y, ys, v); if (e) return undo(e);
+          }
+          chain.push(v); y = prev; ys = st; prev = v;
+        }
+        if (chain.includes(o.id)) return undo('Ese vínculo no es posible.');
+        const e = join(C[2], prev, y, ys, o.id); if (e) return undo(e);
+        if (chain.concat(o.id).some(id => fmIsAncestor(id, id))) return undo('Ese vínculo no es posible.');
+      }
       if (t === 'parent') { link('parent', o.id, base.id); if (ps.length === 1 && fd.get('pair') === 'on' && !fmLinked(ps[0], o.id)) link('couple', ps[0], o.id, { status: 'casados' }); }
       if (t === 'child') { link('parent', base.id, o.id); const w = fd.get('with'); if (w && !fmParents(o.id).includes(w)) link('parent', w, o.id); }
       if (t === 'couple') link('couple', base.id, o.id, { status: fd.get('status') });
       if (t === 'friend') link('friend', base.id, o.id);
       if (t === 'sibling') fd.getAll('sp').forEach(id => { if (!fmParents(o.id).includes(id) && !fmIsAncestor(o.id, id)) link('parent', id, o.id); });
       fmPath = null; save(); renderAll();
-      toast({ title: 'Vínculo agregado', text: `${fmShort(o)} · ${T.find(x => x[0] === t)[1].toLowerCase()} de ${fmShort(base)}`, icon: 'tree' });
+      toast({ title: 'Vínculo agregado', text: `${fmShort(o)} · ${T.concat(TC).find(x => x[0] === t)[1].toLowerCase()} de ${fmShort(base)}`, icon: 'tree' });
     },
     onOpen: f => {
+      // Intermedios: elige a alguien ya anotado o "Persona nueva" (se crea al guardar; el nombre puede quedar vacío)
+      const box = $('[data-chain]', f), vs = [];
+      const drawChain = () => {
+        const C = FM_CHAINS[f.elements.type.value];
+        box.hidden = !C;
+        if (!C) { box.innerHTML = ''; return; }
+        let prev = base.id, y = null, ys = null;
+        box.innerHTML = `<p class="hint">Por medio de quién:</p>` + C[1].map(([st, l], i) => {
+          const c = fmViaCands(st, prev, y, ys), canNew = !(st === 'U' && prev !== 'new' && fmParents(prev).length >= 2), x = vs[i] ||= { sex: '' };
+          if (!c.includes(x.v) && !(x.v === 'new' && canNew)) x.v = c[0] || 'new';
+          y = prev; ys = st; prev = x.v;
+          return `<div class="fm-via"><label class="fld"><span>${l} de ${esc(fmShort(base))}</span><select name="via${i}" data-i="${i}">${c.map(id => `<option value="${id}" ${x.v === id ? 'selected' : ''}>${esc(fmFull(fmP(id)))}</option>`).join('')}${canNew ? `<option value="new" ${x.v === 'new' ? 'selected' : ''}>Persona nueva…</option>` : ''}</select></label>
+            ${x.v === 'new' ? `<div class="row2"><label class="fld"><span>Nombres</span><input name="vianame${i}" data-i="${i}" data-k="name" maxlength="80" value="${esc(x.name || '')}" placeholder="Opcional"></label>
+              <label class="fld"><span>Primer apellido</span><input name="vialast${i}" data-i="${i}" data-k="last" maxlength="60" value="${esc(x.last || '')}"></label></div>
+              <label class="fld"><span>Es</span><select name="viasex${i}" data-i="${i}" data-k="sex">${[['', 'Sin indicar'], ['f', 'Mujer'], ['m', 'Hombre']].map(([k, n]) => `<option value="${k}" ${x.sex === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : ''}</div>`;
+        }).join('');
+      };
+      box.oninput = e => { const k = e.target.dataset.k; if (k) vs[e.target.dataset.i][k] = e.target.value; };
+      box.onchange = e => { if (e.target.dataset.i != null && !e.target.dataset.k) { vs[e.target.dataset.i].v = e.target.value; drawChain(); } };
       const sync = () => {
         const t = f.elements.type.value;
-        $$('[data-for]', f).forEach(el => el.hidden = el.dataset.for !== t);
+        $$('[data-for]', f).forEach(el => el.hidden = !el.dataset.for.split(' ').includes(t));
         // Sugerencia de apellidos para hijos y hermanos (si aún no se escribieron)
         const l1 = f.elements.last1, l2 = f.elements.last2;
         if (!l1.dataset.typed) {
@@ -5112,7 +5185,7 @@ function fmAddModal(base, type = 'parent') {
         }
       };
       f.elements.last1.oninput = f.elements.last2.oninput = e => { e.target.dataset.typed = '1'; };
-      f.elements.type.onchange = sync; f.elements.with.onchange = sync; sync();
+      f.elements.type.onchange = () => { vs.length = 0; drawChain(); sync(); }; f.elements.with.onchange = sync; sync(); drawChain();
       fmFieldsBind(f, ph);
       $$('[data-who]', f).forEach(b => b.onclick = () => {
         const old = b.dataset.who === 'old';
