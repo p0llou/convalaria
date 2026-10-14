@@ -870,6 +870,17 @@
   .fm-chip small { color: var(--muted); }
   .fm-chip.on { border-color: var(--fc); box-shadow: inset 0 0 0 1px var(--fc); }
   .fm-church { width: auto; padding: 6px 10px; }
+  .fm-role-add { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  .fm-role-add .inp { flex: 1; min-width: 0; }
+  .fm-subs { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 2px 12px; border-left: 3px solid var(--accent-softer); }
+  .fm-subs small { font-size: 12px; font-weight: 800; color: var(--muted); }
+  .fm-min { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .fm-min-h, .fm-min-s { display: flex; align-items: center; gap: 6px; }
+  .fm-min-h .inp, .fm-min-s .inp { flex: 1; min-width: 0; }
+  .fm-min-h .inp { font-weight: 800; }
+  .fm-min-h small, .fm-min-s small { margin: 0; white-space: nowrap; }
+  .fm-min-subs { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0 18px; }
+  .fm-min-subs .fm-role-add { margin: 0; }
   .fm-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; }
   .fm-key span { display: inline-block; width: 22px; margin-left: 6px; border-top: 2px solid var(--muted); }
   .fm-key .k-c { border-top: 3px solid var(--accent-strong); }
@@ -1187,7 +1198,7 @@ const defaults = () => ({
   memos: [], memoBoards: [], memoBoard: 'general', memoLayout: null,
   todos: [], todoLists: [], todoList: 'todas',
   media: [], mediaLog: [],
-  people: [], kin: [], meId: null, netPos: {},
+  people: [], kin: [], meId: null, netPos: {}, ministries: fmMinDefault(),
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1209,6 +1220,7 @@ function normalize(raw) {
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
   s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
+  fmMinMigrate(s);
   return s;
 }
 function load() { try { return normalize(JSON.parse(localStorage.getItem(KEY))); } catch { return defaults(); } }
@@ -4516,10 +4528,42 @@ Object.assign(CHG, {
 });
 
 /* ---------- Familias (árbol y red de la comunidad) ---------- */
-// S.people = [{ id, name, last1, last2, sex: f|m|'', photo (imgId), church: hoy|antes|nunca|'', from, to (años), roles (ministerios), notes, created }]
+// S.people = [{ id, name, last1, last2, sex: f|m|'', photo (imgId), church: hoy|antes|nunca|'', from, to (años), mins (ids de ministerios y subgrupos), notes, created }]
+// S.ministries = [{ id, name, subs: [{ id, name }] }]: catálogo editable; orden del array = orden en la ficha
 // S.kin = [{ id, a, b, type }]: parent (a es padre o madre de b) | couple (status: casados|pololos|separados) | friend
 // S.meId = la usuaria; S.netPos = { id: [x, y] } posiciones en la red (las nuevas se calculan solas; "Ordenar" recalcula todo)
 // Familia = primer apellido (color estable por apellido)
+// ids fijos (por nombre) para que el catálogo inicial y la migración coincidan en todos los dispositivos
+function fmMinSlug(t) { return 'm-' + String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+function fmMinDefault() {
+  return ['Pastorado', 'Predicación', ['Alabanza', 'Músicos', 'Danzas', 'Voces'], 'Escuela dominical', 'Niños', 'Jóvenes', 'Damas', 'Varones', 'Matrimonios', 'Diaconado',
+    'Evangelismo', 'Misiones', 'Intercesión', 'Ujieres', 'Sonido y multimedia', 'Tesorería', 'Secretaría', 'Aseo y mantención', 'Cocina'].map(m => {
+    const [name, ...subs] = [].concat(m), id = fmMinSlug(name);
+    return { id, name, subs: subs.map(sb => ({ id: `${id}-${fmMinSlug(sb).slice(2)}`, name: sb })) };
+  });
+}
+// Fichas antiguas: "roles" era texto libre separado por comas → ids del catálogo (crea los que falten)
+function fmMinMigrate(s) {
+  if (!Array.isArray(s.ministries)) s.ministries = fmMinDefault();
+  s.ministries.forEach(m => { if (!Array.isArray(m.subs)) m.subs = []; });
+  s.people.forEach(p => {
+    if (!Array.isArray(p.mins)) p.mins = [];
+    if (typeof p.roles !== 'string') return;
+    p.roles.split(/\s*[,;·]\s*/).map(r => r.trim()).filter(Boolean).forEach(r => {
+      let m = s.ministries.find(y => fmMinSlug(y.name) === fmMinSlug(r));
+      if (!m) s.ministries.push(m = { id: fmMinSlug(r), name: r[0].toUpperCase() + r.slice(1), subs: [] });
+      if (!p.mins.includes(m.id)) p.mins.push(m.id);
+    });
+    delete p.roles;
+  });
+}
+function fmMinText(p) {
+  const on = new Set(p.mins || []);
+  return S.ministries.filter(m => on.has(m.id)).map(m => {
+    const sb = m.subs.filter(x => on.has(x.id)).map(x => x.name);
+    return sb.length ? `${m.name} (${sb.join(', ')})` : m.name;
+  }).join(', ');
+}
 const FM_CHURCH = { hoy: ['En la iglesia', 'church'], antes: ['Estuvo en la iglesia', 'clock-counter-clockwise'], nunca: ['No va a la iglesia', 'house'] };
 const FM_COUPLE = { casados: ['Casados', 'esposo', 'esposa'], pololos: ['Pololos', 'pololo', 'polola'], separados: ['Separados', 'ex pareja', 'ex pareja'] };
 const FM_COLORS = ['#cf5a8a', '#7d5fcf', '#d4724a', '#3a9674', '#4a84c4', '#a8770f', '#2f8f9d', '#8a6a4f'];
@@ -4854,7 +4898,7 @@ function fmKinHtml() {
 /* Personas */
 function fmListHtml() {
   const words = sNorm(fmQuery).split(/\s+/).filter(Boolean);
-  const list = fmSorted().filter(p => (fmChurch === 'todos' || p.church === fmChurch) && words.every(w => sNorm(`${fmFull(p)} ${p.roles} ${p.notes}`).includes(w)));
+  const list = fmSorted().filter(p => (fmChurch === 'todos' || p.church === fmChurch) && words.every(w => sNorm(`${fmFull(p)} ${fmMinText(p)} ${p.notes}`).includes(w)));
   const fams = {};
   list.forEach(p => (fams[p.last1?.trim() || 'Sin apellido'] ||= []).push(p));
   return `<div class="ay-bar"><div class="ay-boards">${[['todos', 'Todas'], ['hoy', 'En la iglesia'], ['antes', 'Estuvieron antes']].map(([k, l]) => `<button class="ay-tab ${fmChurch === k ? 'on' : ''}" data-act="fmChurch" data-c="${k}">${l}</button>`).join('')}</div>
@@ -4863,7 +4907,7 @@ function fmListHtml() {
       <div class="card-h"><h2>Familia ${esc(f)}</h2><span class="badge">${ps.length}</span></div>
       <ul class="list plain">${ps.map(p => { const ch = FM_CHURCH[p.church]; return `<li class="fm-row" data-id="${p.id}"><button class="fm-row-b" data-act="fmEdit" data-id="${p.id}" style="--fc:${fmColor(p)}">${fmAv(p)}
         <span class="fm-row-t"><strong>${esc(fmFull(p))}${p.id === S.meId ? ' <small>(yo)</small>' : ''}</strong>
-        <span class="td-m">${ch ? `<span>${ic(ch[1])} ${ch[0]}${p.from || p.to ? ` · ${[p.from, p.church === 'antes' ? p.to : ''].filter(Boolean).join('–')}` : ''}</span>` : ''}${p.roles ? `<span>${esc(p.roles)}</span>` : ''}</span></span></button>
+        <span class="td-m">${ch ? `<span>${ic(ch[1])} ${ch[0]}${p.from || p.to ? ` · ${[p.from, p.church === 'antes' ? p.to : ''].filter(Boolean).join('–')}` : ''}</span>` : ''}${p.mins?.length ? `<span>${esc(fmMinText(p))}</span>` : ''}</span></span></button>
         <button class="icon-btn" data-act="fmTreeOf" data-id="${p.id}" title="Ver su árbol" aria-label="Ver su árbol">${ic('tree')}</button></li>`; }).join('')}</ul></section>`).join('')
       : `<div class="card">${empty(S.people.length ? 'Nadie coincide con la búsqueda' : 'Todavía no hay personas', 'users-three')}</div>`}`;
 }
@@ -4871,7 +4915,7 @@ function renderFamilias(root) {
   if (!fmP(fmFocus)) fmFocus = fmP(S.meId) ? S.meId : S.people[0]?.id || null;
   const tabs = [['arbol', 'Árbol', 'tree'], ['red', 'Red', 'graph'], ['parentesco', 'Parentesco', 'arrows-left-right'], ['personas', 'Personas', 'users-three']];
   const head = `<div class="page-h"><div><h1>Familias</h1><p class="sub">Tu familia, la iglesia de hoy y la de antes: cómo se enlazan todos.</p></div>
-      <button class="btn btn-primary" data-act="fmNew">${ic('user-plus')} Persona</button></div>
+      <div class="toolbar"><button class="btn" data-act="fmMins">${ic('hands-praying')} Ministerios</button><button class="btn btn-primary" data-act="fmNew">${ic('user-plus')} Persona</button></div></div>
     <div class="seg bx-tabs" style="margin-bottom:12px">${tabs.map(([k, l, i]) => `<button class="${fmTab === k ? 'on' : ''}" data-act="fmTab" data-t="${k}" aria-pressed="${fmTab === k}">${ic(i)} ${l}</button>`).join('')}</div>`;
   if (!S.people.length) {
     root.innerHTML = head + `<div class="card">${empty('Empieza por ti: crea tu ficha y luego agrega a tus padres, hermanos, pareja e hijos.', 'tree')}
@@ -4897,7 +4941,7 @@ function renderFamilias(root) {
         <button class="btn btn-sm" data-act="fmRelayout" title="Recalcular la posición de todos">${ic('shuffle')} Ordenar</button>${zoom}</div>
       <div class="fm-wrap" tabindex="0" aria-label="Red de personas"></div>
       <p class="hint fm-key"><span class="k-p"></span> padres e hijos <span class="k-c"></span> pareja <span class="k-f"></span> amistad · arrastra a alguien para moverlo</p>
-      ${sel ? `<section class="card fm-selcard" style="--fc:${fmColor(sel)}">${fmAv(sel)}<div><strong>${esc(fmFull(sel))}</strong><small class="hint" style="display:block;margin:0">${[ch?.[0], sel.roles].filter(Boolean).map(esc).join(' · ')}</small></div>
+      ${sel ? `<section class="card fm-selcard" style="--fc:${fmColor(sel)}">${fmAv(sel)}<div><strong>${esc(fmFull(sel))}</strong><small class="hint" style="display:block;margin:0">${[ch?.[0], fmMinText(sel)].filter(Boolean).map(esc).join(' · ')}</small></div>
         <div class="btns"><button class="btn btn-sm" data-act="fmTreeOf" data-id="${sel.id}">${ic('tree')} Árbol</button><button class="btn btn-sm" data-act="fmEdit" data-id="${sel.id}">${ic('identification-card')} Ficha</button>
         <button class="btn btn-sm" data-act="fmAdd" data-id="${sel.id}">${ic('plus')} Vínculo</button><button class="btn btn-sm" data-act="fmKinWith" data-id="${sel.id}">${ic('arrows-left-right')} Parentesco</button></div></section>` : ''}`;
   } else body = fmTab === 'parentesco' ? fmKinHtml() : fmListHtml();
@@ -4906,7 +4950,28 @@ function renderFamilias(root) {
 }
 
 /* Fichas y vínculos */
-const FM_BLANK = () => ({ name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', roles: '', notes: '' });
+// Ministerios marcados en la ficha: chips del catálogo; los subgrupos se despliegan al marcar su ministerio
+const fmMinChip = (v, name, on) => `<label class="daychip"><input type="checkbox" name="min" value="${esc(v)}" ${on ? 'checked' : ''}><span>${esc(name)}</span></label>`;
+function fmMinHtml(x) {
+  const on = new Set(x.mins || []);
+  return `<div class="fld"><span>Ministerios o servicio</span><div class="days" data-mins>${S.ministries.map(m => fmMinChip(m.id, m.name, on.has(m.id))).join('')}</div>
+      ${S.ministries.filter(m => m.subs.length).map(m => `<div class="fm-subs" data-sub-of="${m.id}" ${on.has(m.id) ? '' : 'hidden'}><small>${esc(m.name)}</small>
+        <div class="days">${m.subs.map(sb => fmMinChip(sb.id, sb.name, on.has(sb.id))).join('')}</div></div>`).join('')}
+      <div class="fm-role-add"><input class="inp" data-min-new maxlength="40" placeholder="Otro ministerio…" aria-label="Otro ministerio"><button type="button" class="btn btn-sm" data-min-add>${ic('plus')} Agregar</button></div></div>`;
+}
+// Lee los marcados; los agregados con "Otro ministerio" entran al catálogo recién al guardar
+function fmMinsFrom(fd) {
+  const vals = fd.getAll('min'), out = [];
+  vals.filter(v => v.startsWith('new:')).forEach(v => {
+    const name = v.slice(4);
+    let m = S.ministries.find(y => sNorm(y.name) === sNorm(name));
+    if (!m) S.ministries.push(m = { id: uid(), name, subs: [] });
+    out.push(m.id);
+  });
+  S.ministries.forEach(m => { if (!vals.includes(m.id)) return; out.push(m.id); m.subs.forEach(sb => vals.includes(sb.id) && out.push(sb.id)); });
+  return [...new Set(out)];
+}
+const FM_BLANK = () => ({ name: '', last1: '', last2: '', sex: '', photo: null, church: '', from: '', to: '', mins: [], notes: '' });
 function fmFieldsHtml(x, req = true) {
   const yr = (n, v, l) => `<label class="fld"><span>${l}</span><input name="${n}" inputmode="numeric" maxlength="4" value="${esc(v)}" placeholder="Año"></label>`;
   return `
@@ -4919,19 +4984,30 @@ function fmFieldsHtml(x, req = true) {
     <h3 class="sub-h">Iglesia</h3>
     <label class="fld"><span>Situación</span><select name="church"><option value="">Sin indicar</option>${Object.entries(FM_CHURCH).map(([k, [l]]) => `<option value="${k}" ${x.church === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <div class="row2">${yr('from', x.from, 'Desde')}${yr('to', x.to, 'Hasta (si ya no está)')}</div>
-    <label class="fld"><span>Ministerios o servicio</span><input name="roles" maxlength="160" value="${esc(x.roles)}" placeholder="Alabanza, escuela dominical, diácono…"></label>
+    ${fmMinHtml(x)}
     <label class="fld"><span>Notas</span><textarea name="notes" rows="3" placeholder="Recuerdos, anécdotas, dónde vive ahora…">${esc(x.notes)}</textarea></label>
 `;
 }
 function fmFieldsData(fd, photo) {
   return { name: fd.get('name').trim(), last1: fd.get('last1').trim(), last2: fd.get('last2').trim(), sex: fd.get('sex'), photo,
-    church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), roles: fd.get('roles').trim(), notes: fd.get('notes').trim() };
+    church: fd.get('church'), from: fd.get('from').trim(), to: fd.get('to').trim(), mins: fmMinsFrom(fd), notes: fd.get('notes').trim() };
 }
-function fmPhotoBind(f, ph) {
+function fmFieldsBind(f, ph) {
   const pv = $('[data-pv]', f), no = $('[data-nophoto]', f), pick = $('[data-photo]', f);
   const paint = () => { pv.innerHTML = fmAv({ name: f.elements.name.value || '?', last1: f.elements.last1.value, photo: ph.id }); no.hidden = !ph.id; pick.lastChild.textContent = ` ${ph.id ? 'Cambiar' : 'Subir'} foto`; };
   pick.onclick = async () => { const [id] = await pickImage(false, 480); if (id) { ph.id = id; paint(); } };
   no.onclick = () => { ph.id = null; paint(); };
+  const box = $('[data-mins]', f), inp = $('[data-min-new]', f);
+  const subs = cb => { const el = $(`[data-sub-of="${cb.value}"]`, f); if (el) el.hidden = !cb.checked; };
+  box.onchange = e => subs(e.target);
+  const addMin = () => {
+    const r = inp.value.trim(); if (!r) return;
+    const cb = $$('input', box).find(c => sNorm(c.nextElementSibling.textContent) === sNorm(r));
+    if (cb) { cb.checked = true; subs(cb); } else box.insertAdjacentHTML('beforeend', fmMinChip('new:' + r, r, true));
+    inp.value = ''; inp.focus();
+  };
+  $('[data-min-add]', f).onclick = addMin;
+  inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addMin(); } };
 }
 function fmPersonModal(p = null, opts = {}) {
   const x = p || FM_BLANK(), ph = { id: x.photo };
@@ -4969,7 +5045,7 @@ function fmPersonModal(p = null, opts = {}) {
       fmPath = null; save(); renderAll();
     } : null,
     onOpen: f => {
-      fmPhotoBind(f, ph);
+      fmFieldsBind(f, ph);
       $$('[data-unlink]', f).forEach(b => b.onclick = () => {
         if (!confirm('¿Quitar este vínculo?')) return;
         S.kin = S.kin.filter(k => k.id !== b.dataset.unlink); fmPath = null;
@@ -5037,7 +5113,7 @@ function fmAddModal(base, type = 'parent') {
       };
       f.elements.last1.oninput = f.elements.last2.oninput = e => { e.target.dataset.typed = '1'; };
       f.elements.type.onchange = sync; f.elements.with.onchange = sync; sync();
-      fmPhotoBind(f, ph);
+      fmFieldsBind(f, ph);
       $$('[data-who]', f).forEach(b => b.onclick = () => {
         const old = b.dataset.who === 'old';
         f.elements.who.value = b.dataset.who;
@@ -5047,7 +5123,56 @@ function fmAddModal(base, type = 'parent') {
     },
   });
 }
+// Catálogo de ministerios: renombrar, ordenar, borrar y subgrupos (se aplica todo al guardar)
+function fmMinModal() {
+  const cnt = id => S.people.filter(p => p.mins?.includes(id)).length;
+  const who = n => n ? `<small class="hint">${n} ${n === 1 ? 'persona' : 'personas'}</small>` : '';
+  const del = l => `<button type="button" class="icon-btn" data-rm title="Borrar" aria-label="Borrar ${l}">${ic('trash')}</button>`;
+  const subRow = sb => `<div class="fm-min-s" data-id="${sb.id}"><input class="inp" data-name maxlength="40" value="${esc(sb.name)}" aria-label="Subgrupo">${who(cnt(sb.id))}${del('subgrupo')}</div>`;
+  const row = m => `<div class="fm-min" data-id="${m.id}">
+      <div class="fm-min-h"><input class="inp" data-name maxlength="40" value="${esc(m.name)}" aria-label="Ministerio">${who(cnt(m.id))}
+        <button type="button" class="icon-btn" data-up title="Subir" aria-label="Subir">${ic('caret-up')}</button><button type="button" class="icon-btn" data-down title="Bajar" aria-label="Bajar">${ic('caret-down')}</button>${del('ministerio')}</div>
+      <div class="fm-min-subs">${m.subs.map(subRow).join('')}
+        <div class="fm-role-add"><input class="inp" data-sub-new maxlength="40" placeholder="Agregar subgrupo…" aria-label="Agregar subgrupo"><button type="button" class="icon-btn" data-sub-add aria-label="Agregar subgrupo">${ic('plus')}</button></div></div></div>`;
+  openModal('Ministerios', `<p class="hint">Los subgrupos (por ejemplo, músicos o voces en Alabanza) aparecen en la ficha al marcar su ministerio.</p>
+    <div data-list>${S.ministries.map(row).join('')}</div>
+    <div class="fm-role-add"><input class="inp" data-min-new maxlength="40" placeholder="Nuevo ministerio…" aria-label="Nuevo ministerio"><button type="button" class="btn btn-sm" data-min-add>${ic('plus')} Agregar</button></div>`, {
+    onSave: (fd, form) => {
+      const list = $$('.fm-min', form).map(r => ({ id: r.dataset.id, name: $('.fm-min-h [data-name]', r).value.trim(),
+        subs: $$('.fm-min-s', r).map(x => ({ id: x.dataset.id, name: $('[data-name]', x).value.trim() })) }));
+      if (list.some(m => !m.name || m.subs.some(x => !x.name))) return 'Hay un nombre vacío.';
+      const keep = new Set(list.flatMap(m => [m.id, ...m.subs.map(x => x.id)]));
+      S.ministries = list;
+      S.people.forEach(p => { if (p.mins?.some(id => !keep.has(id))) p.mins = p.mins.filter(id => keep.has(id)); });
+      save(); renderAll();
+      toast({ title: 'Ministerios guardados', icon: 'hands-praying' });
+    },
+    onOpen: f => {
+      const lst = $('[data-list]', f);
+      const add = (inp, fn) => { const v = inp.value.trim(); if (!v) return; fn(v); inp.value = ''; inp.focus(); };
+      const addMin = () => add($('[data-min-new]', f), v => lst.insertAdjacentHTML('beforeend', row({ id: uid(), name: v, subs: [] })));
+      const addSub = r => add($('[data-sub-new]', r), v => $('.fm-min-subs > .fm-role-add', r).insertAdjacentHTML('beforebegin', subRow({ id: uid(), name: v })));
+      $('[data-min-add]', f).onclick = addMin;
+      $('[data-min-new]', f).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addMin(); } };
+      lst.onkeydown = e => { if (e.key === 'Enter' && e.target.matches('[data-sub-new]')) { e.preventDefault(); addSub(e.target.closest('.fm-min')); } };
+      lst.onclick = e => {
+        const b = e.target.closest('button'); if (!b) return;
+        const r = b.closest('.fm-min');
+        if (b.matches('[data-sub-add]')) addSub(r);
+        else if (b.matches('[data-up]') && r.previousElementSibling) r.after(r.previousElementSibling);
+        else if (b.matches('[data-down]') && r.nextElementSibling) r.before(r.nextElementSibling);
+        else if (b.matches('[data-rm]')) {
+          const x = b.closest('.fm-min-s') || r, ids = [x.dataset.id, ...$$('.fm-min-s', x).map(y => y.dataset.id)];
+          const n = S.people.filter(p => p.mins?.some(id => ids.includes(id))).length;
+          if (n && !confirm(`${n === 1 ? 'Una persona lo tiene' : `${n} personas lo tienen`} en su ficha. ¿Borrarlo igual?`)) return;
+          x.remove();
+        }
+      };
+    },
+  });
+}
 Object.assign(ACT, {
+  fmMins: () => fmMinModal(),
   fmTab: el => { fmTab = el.dataset.t; renderAll(); },
   fmNew: () => fmPersonModal(null, { me: !S.people.length }),
   fmMe: () => fmPersonModal(null, { me: true, after: t => { fmFocus = t.id; } }),
@@ -5804,8 +5929,8 @@ const searchSources = () => [
       fields: [t.text, t.notes], open: () => { S.todoList = t.list; go('tareas'); tdModal(t); } })) },
   { label: 'Bitácora', icon: 'popcorn', items: () => S.media.map(m => ({ title: m.title, sub: [BX[m.type].one, m.year, m.by].filter(Boolean).join(' · '),
       fields: [m.title, m.by, ...S.mediaLog.filter(l => l.media === m.id).map(l => l.review)], open: () => { go('bitacora'); bxModal(m); } })) },
-  { label: 'Familias', icon: 'tree', items: () => S.people.map(p => ({ title: fmFull(p), sub: [p.last1 ? 'Familia ' + p.last1 : '', FM_CHURCH[p.church]?.[0], p.roles].filter(Boolean).join(' · '),
-      fields: [fmFull(p), p.roles, p.notes], open: () => { fmFocus = p.id; fmTab = 'arbol'; go('familias'); fmPersonModal(p); } })) },
+  { label: 'Familias', icon: 'tree', items: () => S.people.map(p => ({ title: fmFull(p), sub: [p.last1 ? 'Familia ' + p.last1 : '', FM_CHURCH[p.church]?.[0], fmMinText(p)].filter(Boolean).join(' · '),
+      fields: [fmFull(p), fmMinText(p), p.notes], open: () => { fmFocus = p.id; fmTab = 'arbol'; go('familias'); fmPersonModal(p); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
