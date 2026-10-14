@@ -749,6 +749,71 @@
   .td-due.today { color: var(--accent-strong); }
   .td-star.on { color: #d9a520; }
 
+  /* Bitácora */
+  .bx-tabs { max-width: 100%; overflow-x: auto; }
+  .bx-tabs button, .bx-types button { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .bx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 18px 14px; margin-bottom: 8px; }
+  .bx-grid.fav { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 560px; }
+  .bx-item { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-radius: 10px; }
+  .bx-item:focus-visible, .bx-row-main:focus-visible, .bx-log-b:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+  .bx-item:hover .bx-art { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .bx-art { position: relative; display: block; flex: none; aspect-ratio: 2 / 3; border-radius: 8px; overflow: hidden; background: var(--accent-soft); box-shadow: 0 1px 3px rgba(0,0,0,.12); transition: transform .15s, box-shadow .15s; }
+  .bx-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .bx-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px; text-align: center; color: var(--accent-strong); font-size: 12px; }
+  .bx-ph i { font-size: 28px; }
+  .bx-ph b { font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .bx-art.sm { width: 44px; border-radius: 5px; }
+  .bx-art.sm .bx-ph b { display: none; }
+  .bx-art.sm .bx-ph i { font-size: 18px; }
+  .bx-art.lg { width: 130px; }
+  .bx-under { display: flex; align-items: center; gap: 6px; min-height: 18px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .bx-under .ph-heart, .bx-row-r .ph-heart { color: var(--accent-strong); }
+  .bx-stars { display: inline-flex; gap: 1px; color: #d9a520; font-size: 14px; }
+  .bx-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
+  .bx-row:last-child, .bx-log:last-child, .bx-r:last-child { border-bottom: 0; }
+  .bx-dd { width: 34px; flex: none; display: flex; flex-direction: column; text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .bx-dd b { font-size: 20px; line-height: 1.1; color: var(--ink); }
+  .bx-row-main { all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border-radius: 8px; }
+  .bx-row-t { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .bx-row-t strong { overflow-wrap: anywhere; }
+  .bx-rev { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .bx-row-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+  .bx-detail { display: flex; align-items: flex-start; gap: 16px; }
+  .bx-detail > div { flex: 1; min-width: 0; }
+  .bx-dt { margin: 0 0 4px; font-family: var(--font-display); font-size: 22px; line-height: 1.15; overflow-wrap: anywhere; }
+  .bx-tg.on { background: var(--accent-soft); color: var(--accent-strong); }
+  .bx-log { padding: 10px 2px; border-bottom: 1px dashed var(--line); }
+  .bx-log-b { all: unset; cursor: pointer; display: block; width: 100%; border-radius: 6px; }
+  .bx-log-b p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bx-mhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .bx-mhead > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .bx-mhead small { color: var(--muted); font-weight: 600; }
+  .bx-rate { display: flex; align-items: center; gap: 2px; }
+  .bx-rs { position: relative; display: inline-block; width: 1em; height: 1em; font-size: 32px; color: var(--muted); }
+  .bx-rs i { position: absolute; inset: 0; }
+  .bx-rs .bx-on { color: #d9a520; }
+  .bx-rs button { position: absolute; top: 0; bottom: 0; left: 0; width: 50%; z-index: 1; border: 0; padding: 0; background: transparent; cursor: pointer; }
+  .bx-rs button + button { left: 50%; }
+  .bx-rate small { margin-left: 10px; color: var(--muted); font-weight: 700; }
+  .bx-res { display: flex; flex-direction: column; margin-top: 12px; max-height: 50vh; overflow-y: auto; }
+  .bx-r { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
+  .bx-r-t { flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .bx-r-t strong { overflow-wrap: anywhere; }
+  .bx-r-t small { color: var(--muted); font-weight: 600; }
+  .bx-r-b { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bx-had { display: inline-flex; align-items: center; gap: 4px; color: var(--good) !important; font-weight: 700; }
+  .bx-cols { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; height: 170px; }
+  .bx-cols.dist { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+  .bx-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  .bx-col em { height: 16px; font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .bx-bar { position: relative; flex: 1; width: 100%; max-width: 30px; }
+  .bx-bar span { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent-strong); border-radius: 4px 4px 0 0; }
+  .bx-col small { font-size: 11px; font-weight: 700; color: var(--muted); }
+  @media (max-width: 520px) {
+    .bx-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+    .bx-art.lg { width: 96px; }
+  }
+
   /* Ayudas de memoria */
   .ay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
   .ay-boards { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 auto; }
@@ -908,6 +973,7 @@
     <button class="nav-btn nav-fix" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
     <button class="nav-btn" data-act="go" data-view="ayudas"><span class="ic"><i class="ph-duotone ph-notepad" aria-hidden="true"></i></span><span>Ayudas de memoria</span></button>
     <div class="nav-g">Tú</div>
+    <button class="nav-btn" data-act="go" data-view="bitacora"><span class="ic"><i class="ph-duotone ph-popcorn" aria-hidden="true"></i></span><span>Bitácora</span></button>
     <button class="nav-btn" data-act="go" data-view="decorar"><span class="ic"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span><span>Decorar</span></button>
     <button class="nav-btn" data-act="toggleDark"><span class="ic"><i class="ph-duotone ph-moon-stars" aria-hidden="true"></i></span><span>Modo noche</span></button>
     <button class="nav-btn nav-more" data-act="moreOpen" aria-haspopup="dialog"><span class="ic"><i class="ph-duotone ph-dots-three-circle" aria-hidden="true"></i></span><span>Más</span></button>
@@ -930,6 +996,7 @@
     <section class="view" id="view-lugares" hidden></section>
     <section class="view" id="view-finanzas" hidden></section>
     <section class="view" id="view-ayudas" hidden></section>
+    <section class="view" id="view-bitacora" hidden></section>
     <section class="view" id="view-decorar" hidden></section>
   </main>
 </div>
@@ -1034,6 +1101,7 @@ const defaults = () => ({
   habits: [], habitLog: {},
   memos: [], memoBoards: [], memoBoard: 'general', memoLayout: null,
   todos: [], todoLists: [], todoList: 'todas',
+  media: [], mediaLog: [],
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1050,7 +1118,7 @@ function normalize(raw) {
   delete s.awards.verses;
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
   s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
@@ -2931,7 +2999,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -3989,6 +4057,321 @@ Object.assign(FORMS, {
   },
 });
 
+/* ---------- Bitácora (libros, series y películas) ---------- */
+// S.media = [{ id, type: libro|serie|peli, title, year, by, cover (url), src ('ol:…' | 'tvm:…' | 'it:…', vacío si es manual), seasons, pages,
+//              want (por ver/leer), now (en curso), season (temporada en curso), fav, created }]
+// S.mediaLog = [{ id, media, date, rating (0–10, medias estrellas), review, season, again, created }]
+// Búsqueda gratis y sin clave: Open Library (libros), TVMaze (series), iTunes (películas). Las portadas se enlazan, no se guardan.
+const BX = {
+  libro: { one: 'Libro', many: 'Libros', icon: 'book-open', done: 'Leído', want: 'Por leer', now: 'Leyendo', again: 'Relectura' },
+  serie: { one: 'Serie', many: 'Series', icon: 'television', done: 'Vista', want: 'Por ver', now: 'Viendo', again: 'Repetida' },
+  peli: { one: 'Película', many: 'Películas', icon: 'film-slate', done: 'Vista', want: 'Por ver', now: 'Viendo', again: 'Repetida' },
+};
+let bxType = 'todo', bxTab = 'diario', bxSort = 'fecha', bxYear = new Date().getFullYear(), bxResults = [];
+const bxLogs = m => S.mediaLog.filter(l => l.media === m.id).sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+const bxRating = m => bxLogs(m).find(l => l.rating)?.rating || 0;
+const bxLast = m => bxLogs(m)[0]?.date || '';
+const bxStars = r => r ? `<span class="bx-stars" title="${(r / 2).toLocaleString('es')} de 5" aria-label="${(r / 2).toLocaleString('es')} de 5 estrellas">${ic('star', 'fill').repeat(Math.floor(r / 2))}${r % 2 ? ic('star-half', 'fill') : ''}</span>` : '';
+// Portada con respaldo: si la imagen no carga queda el ícono con el título
+const bxArt = (m, cls = '') => `<span class="bx-art ${cls}"><span class="bx-ph">${ic(BX[m.type].icon, 'duotone')}<b>${esc(m.title)}</b></span>${m.cover ? `<img src="${esc(m.cover)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+async function bxJson(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function bxSearch(type, q) {
+  const enc = encodeURIComponent(q);
+  if (type === 'libro') {
+    const r = await bxJson(`https://openlibrary.org/search.json?q=${enc}&limit=12&lang=es&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median`);
+    return (r.docs || []).map(d => ({ src: 'ol:' + d.key, title: d.title, year: String(d.first_publish_year || ''), by: (d.author_name || []).slice(0, 2).join(', '),
+      cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : '', pages: d.number_of_pages_median || null }));
+  }
+  if (type === 'serie') {
+    const r = await bxJson(`https://api.tvmaze.com/search/shows?q=${enc}`);
+    return r.slice(0, 12).map(({ show: x }) => ({ src: 'tvm:' + x.id, tvm: x.id, title: x.name, year: (x.premiered || '').slice(0, 4),
+      by: x.network?.name || x.webChannel?.name || '', cover: (x.image?.medium || '').replace(/^http:/, 'https:') }));
+  }
+  const r = await bxJson(`https://itunes.apple.com/search?term=${enc}&media=movie&entity=movie&limit=12&country=CL&lang=es_es`);
+  return (r.results || []).map(x => ({ src: 'it:' + x.trackId, title: x.trackName, year: (x.releaseDate || '').slice(0, 4), by: x.artistName || '',
+    cover: (x.artworkUrl100 || '').replace('100x100bb', '400x600bb') }));
+}
+async function bxSeasons(m, tvm) {
+  try { const r = await bxJson(`https://api.tvmaze.com/shows/${tvm}/seasons`); m.seasons = r.filter(x => x.number > 0).length || null; save(); } catch {}
+}
+function bxUpsert(type, x) {
+  let m = S.media.find(y => y.src && y.src === x.src);
+  if (!m) {
+    m = { id: uid(), type, title: x.title, year: x.year || '', by: x.by || '', cover: x.cover || '', src: x.src || '', seasons: null, pages: x.pages || null,
+      want: false, now: false, season: null, fav: false, created: Date.now() };
+    S.media.push(m);
+  }
+  return m;
+}
+function bxPoster(m) {
+  const n = S.mediaLog.filter(l => l.media === m.id).length;
+  return `<button class="bx-item" data-act="bxOpen" data-id="${m.id}" title="${esc(m.title)}${m.year ? ` (${esc(m.year)})` : ''}">${bxArt(m)}
+    <span class="bx-under">${bxStars(bxRating(m))}${m.fav ? ic('heart', 'fill') : ''}${n > 1 ? ic('arrows-clockwise') : ''}${m.now && m.season ? `<span>T${m.season}</span>` : ''}</span></button>`;
+}
+function bxRow(l) {
+  const m = findById(S.media, l.media);
+  if (!m) return '';
+  const d = fromYmd(l.date), b = BX[m.type];
+  return `<li class="bx-row" data-id="${l.id}"><span class="bx-dd"><b>${d.getDate()}</b>${DIAS_C[dow(d)]}</span>
+    <button class="bx-row-main" data-act="bxLog" data-id="${l.id}">${bxArt(m, 'sm')}<span class="bx-row-t"><strong>${esc(m.title)}</strong>
+      <span class="td-m"><span>${ic(b.icon)} ${b.one}${m.year ? ' · ' + esc(m.year) : ''}</span>${l.season ? `<span>Temporada ${l.season}</span>` : ''}${l.again ? `<span>${ic('arrows-clockwise')} ${b.again}</span>` : ''}</span>
+      ${l.review ? `<span class="bx-rev">${esc(l.review)}</span>` : ''}</span></button>
+    <span class="bx-row-r">${bxStars(l.rating)}${m.fav ? ic('heart', 'fill') : ''}</span></li>`;
+}
+function bxDiario(logs) {
+  if (!logs.length) return `<div class="card">${empty('Registra lo que ves y lees: aparece aquí, por fecha', 'notebook')}</div>`;
+  const groups = {};
+  [...logs].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created).forEach(l => (groups[l.date.slice(0, 7)] ||= []).push(l));
+  return `<section class="card">${Object.entries(groups).map(([ym, ls]) => `<h3 class="sub-h">${cap(MESES[Number(ym.slice(5)) - 1])} ${ym.slice(0, 4)}</h3>
+    <ul class="list plain">${ls.map(bxRow).join('')}</ul>`).join('')}</section>`;
+}
+function bxColeccion(media) {
+  const list = media.filter(m => bxLast(m) || (!m.want && !m.now));
+  if (!list.length) return `<div class="card">${empty('Aún no registras nada. Toca “Agregar” para buscar un título.', 'popcorn')}</div>`;
+  const sorters = {
+    fecha: (a, b) => bxLast(b).localeCompare(bxLast(a)) || b.created - a.created,
+    nota: (a, b) => bxRating(b) - bxRating(a) || a.title.localeCompare(b.title, 'es'),
+    titulo: (a, b) => a.title.localeCompare(b.title, 'es'),
+  };
+  return `<div class="btns" style="margin-bottom:12px"><span class="hint" style="margin:0">${list.length} ${list.length === 1 ? 'título' : 'títulos'}</span><span class="grow"></span>
+      <label class="toggle">Ordenar <select class="inp" style="width:auto;padding:6px 10px" data-chg="bxSort">${[['fecha', 'Recientes'], ['nota', 'Mejor nota'], ['titulo', 'Título']].map(([k, l]) => `<option value="${k}" ${bxSort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    <div class="bx-grid">${list.sort(sorters[bxSort] || sorters.fecha).map(bxPoster).join('')}</div>`;
+}
+function bxPendientes(media) {
+  const now = media.filter(m => m.now), want = media.filter(m => m.want && !m.now).sort((a, b) => b.created - a.created);
+  if (!now.length && !want.length) return `<div class="card">${empty('Guarda aquí lo que quieres ver o leer', 'bookmark-simple')}</div>`;
+  return `${now.length ? `<h3 class="sub-h">En curso</h3><div class="bx-grid">${now.map(bxPoster).join('')}</div>` : ''}
+    ${want.length ? `<h3 class="sub-h">${bxType === 'todo' ? 'Por ver y leer' : BX[bxType].want}</h3><div class="bx-grid">${want.map(bxPoster).join('')}</div>` : ''}`;
+}
+function bxStats(media, allLogs) {
+  const years = [...new Set([new Date().getFullYear(), ...S.mediaLog.map(l => Number(l.date.slice(0, 4)))])].sort((a, b) => b - a);
+  const head = `<div class="btns" style="margin-bottom:14px"><label class="toggle">Año <select class="inp" style="width:auto;padding:6px 10px" data-chg="bxYear">${years.map(y => `<option ${y === bxYear ? 'selected' : ''}>${y}</option>`).join('')}</select></label></div>`;
+  const types = bxType === 'todo' ? Object.keys(BX) : [bxType];
+  const favs = types.map(t => [t, media.filter(m => m.type === t && m.fav).sort((a, b) => bxRating(b) - bxRating(a)).slice(0, 4)]);
+  const favHtml = `<section class="card span-12"><div class="card-h"><h2>Tus favoritos</h2></div>
+    ${favs.some(([, l]) => l.length) ? favs.filter(([, l]) => l.length).map(([t, l]) => `<h3 class="sub-h">${BX[t].many}</h3><div class="bx-grid fav">${l.map(bxPoster).join('')}</div>`).join('')
+      : '<p class="hint">Marca con el corazón tus favoritos y aquí aparecen los 4 mejores de cada tipo.</p>'}</section>`;
+  const logs = allLogs.filter(l => Number(l.date.slice(0, 4)) === bxYear);
+  if (!logs.length) return head + `<div class="grid"><section class="card span-12">${empty('Sin registros en ' + bxYear, 'chart-bar')}</section>${favHtml}</div>`;
+  const mOf = l => findById(S.media, l.media), ofType = t => logs.filter(l => mOf(l)?.type === t);
+  const rated = logs.filter(l => l.rating), avg = rated.length ? rated.reduce((n, l) => n + l.rating, 0) / rated.length / 2 : 0;
+  const fmt1 = n => n.toLocaleString('es', { maximumFractionDigits: 1 });
+  const tile = (label, val, small = '') => `<div class="tile"><span>${label}</span><strong>${val}</strong>${small ? `<small>${small}</small>` : ''}</div>`;
+  const tiles = types.map(t => {
+    const ls = ofType(t);
+    if (t === 'libro') { const pages = ls.reduce((n, l) => n + (mOf(l).pages || 0), 0); return tile('Libros leídos', ls.length, pages ? `${pages.toLocaleString('es-CL')} páginas` : ''); }
+    if (t === 'serie') { const n = new Set(ls.map(l => l.media)).size; return tile('Temporadas vistas', ls.length, n ? `${n} ${n === 1 ? 'serie' : 'series'}` : ''); }
+    const again = ls.filter(l => l.again).length;
+    return tile('Películas vistas', ls.length, again ? `${again} ${again === 1 ? 'repetida' : 'repetidas'}` : '');
+  }).join('') + tile('Nota promedio', avg ? fmt1(avg) + ' de 5' : '—', rated.length ? `${rated.length} con nota` : '');
+  const cols = (vals, labels, tips, cls = '') => {
+    const max = Math.max(1, ...vals);
+    return `<div class="bx-cols ${cls}">${vals.map((n, i) => `<div class="bx-col" title="${tips[i]}"><em>${n || ''}</em><div class="bx-bar">${n ? `<span style="height:${n / max * 100}%"></span>` : ''}</div><small>${labels[i]}</small></div>`).join('')}</div>`;
+  };
+  const byMonth = Array(12).fill(0), byRate = Array(10).fill(0);
+  logs.forEach(l => { byMonth[Number(l.date.slice(5, 7)) - 1]++; if (l.rating) byRate[l.rating - 1]++; });
+  const what = bxType === 'todo' ? 'registros' : bxType === 'libro' ? 'libros' : bxType === 'serie' ? 'temporadas' : 'películas';
+  return head + `<div class="tiles">${tiles}</div>
+    <div class="grid">
+      <section class="card span-7"><div class="card-h"><h2>Por mes</h2><span class="badge">${logs.length} ${what}</span></div>
+        ${cols(byMonth, MESES.map(m => m.slice(0, 3)), byMonth.map((n, i) => `${cap(MESES[i])}: ${n} ${what}`))}</section>
+      <section class="card span-5"><div class="card-h"><h2>Tus notas</h2></div>
+        ${rated.length ? cols(byRate, byRate.map((_, i) => i % 2 ? String((i + 1) / 2) : ''), byRate.map((n, i) => `${((i + 1) / 2).toLocaleString('es')} estrellas: ${n}`), 'dist') : '<p class="hint">Aún no pones nota a nada este año.</p>'}</section>
+      ${favHtml}
+    </div>`;
+}
+function renderBitacora(root) {
+  const media = S.media.filter(m => bxType === 'todo' || m.type === bxType), ids = new Set(media.map(m => m.id));
+  const logs = S.mediaLog.filter(l => ids.has(l.media));
+  const tabs = [['diario', 'Diario', 'notebook'], ['coleccion', 'Colección', 'squares-four'], ['pendientes', 'Pendientes', 'bookmark-simple'], ['stats', 'Estadísticas', 'chart-bar']];
+  const body = bxTab === 'coleccion' ? bxColeccion(media) : bxTab === 'pendientes' ? bxPendientes(media) : bxTab === 'stats' ? bxStats(media, logs) : bxDiario(logs);
+  root.innerHTML = `
+    <div class="page-h"><div><h1>Bitácora</h1><p class="sub">Libros, series y películas: lo que viste, leíste y quieres ver.</p></div>
+      <button class="btn btn-primary" data-act="bxAdd">${ic('plus')} Agregar</button></div>
+    <div class="ay-bar"><div class="ay-boards">${[['todo', 'Todo', 'popcorn'], ...Object.entries(BX).map(([k, b]) => [k, b.many, b.icon])].map(([k, l, i]) =>
+      `<button class="ay-tab ${bxType === k ? 'on' : ''}" data-act="bxType" data-t="${k}" aria-pressed="${bxType === k}">${ic(i)} ${l}</button>`).join('')}</div>
+      <div class="seg bx-tabs">${tabs.map(([k, l, i]) => `<button class="${bxTab === k ? 'on' : ''}" data-act="bxTab" data-t="${k}" aria-pressed="${bxTab === k}">${ic(i)} ${l}</button>`).join('')}</div></div>
+    ${body}`;
+}
+// Ficha: estado, temporadas y registros (el modal liga sus propios handlers)
+function bxModal(m) {
+  const b = BX[m.type], logs = bxLogs(m), r = bxRating(m);
+  const nS = m.type === 'serie' ? Math.max(m.seasons || 0, ...logs.map(l => l.season || 0)) : 0;
+  const tg = (k, icon, label, on) => `<button type="button" class="btn btn-sm bx-tg ${on ? 'on' : ''}" data-bx="${k}" data-i="${icon}" aria-pressed="${on}">${ic(icon, on ? 'fill' : '')} ${label}</button>`;
+  openModal(b.one, `
+    <div class="bx-detail">${bxArt(m, 'lg')}<div>
+      <h4 class="bx-dt">${esc(m.title)}</h4>
+      <p class="hint" style="margin:0 0 8px">${[m.year, m.by, m.seasons ? `${m.seasons} temporadas` : '', m.pages ? `${m.pages} páginas` : ''].filter(Boolean).map(esc).join(' · ')}</p>
+      ${r ? `<p style="margin:0 0 10px">${bxStars(r)}</p>` : ''}
+      <div class="btns"><button type="button" class="btn btn-sm btn-primary" data-bx="log">${ic('plus')} Registrar</button>
+        ${tg('want', 'bookmark-simple', b.want, m.want)}${tg('now', 'play', b.now + (m.now && m.season ? ' T' + m.season : ''), m.now)}${tg('fav', 'heart', 'Favorito', m.fav)}
+        <button type="button" class="btn btn-sm" data-bx="edit">${ic('pencil-simple')} Datos</button></div></div></div>
+    ${nS ? `<h3 class="sub-h">Temporadas</h3><ul class="list plain">${Array.from({ length: nS }, (_, i) => i + 1).map(s => {
+      const last = logs.find(l => l.season === s);
+      return `<li class="pr"><span class="pr-t">Temporada ${s}</span>${last ? `${bxStars(last.rating)}<small>${shortDate(last.date)}</small>` : '<small>Sin ver</small>'}
+        <button type="button" class="btn btn-sm" data-bx="log" data-s="${s}">${last ? 'Otra vez' : 'Registrar'}</button></li>`;
+    }).join('')}</ul>` : ''}
+    <h3 class="sub-h">Registros</h3>
+    ${logs.length ? `<ul class="list plain">${logs.map(l => `<li class="bx-log"><button type="button" class="bx-log-b" data-bx="logEdit" data-id="${l.id}">
+      <span class="td-m"><span>${ic('calendar-blank')} ${shortDate(l.date)} ${l.date.slice(0, 4)}</span>${l.season ? `<span>Temporada ${l.season}</span>` : ''}${l.again ? `<span>${ic('arrows-clockwise')} ${b.again}</span>` : ''}${bxStars(l.rating)}</span>
+      ${l.review ? `<p>${esc(l.review)}</p>` : ''}</button></li>`).join('')}</ul>` : '<p class="hint">Todavía no lo registras.</p>'}`, {
+    noSave: true,
+    onDelete: () => { S.media = S.media.filter(x => x !== m); S.mediaLog = S.mediaLog.filter(l => l.media !== m.id); save(); renderAll(); },
+    onOpen: f => {
+      const paint = () => [['want', m.want], ['now', m.now], ['fav', m.fav]].forEach(([k, on]) => {
+        const el = $(`[data-bx="${k}"]`, f);
+        el.classList.toggle('on', on); el.setAttribute('aria-pressed', on); $('i', el).className = `ph${on ? '-fill' : ''} ph-${el.dataset.i}`;
+      });
+      $('.modal-b', f).onclick = e => {
+        const el = e.target.closest('[data-bx]');
+        if (!el) return;
+        const k = el.dataset.bx;
+        if (k === 'log') { modal.close(); bxLogModal(m, null, Number(el.dataset.s) || null); return; }
+        if (k === 'logEdit') { modal.close(); bxLogModal(m, findById(S.mediaLog, el.dataset.id)); return; }
+        if (k === 'edit') { modal.close(); bxEditModal(m); return; }
+        if (k === 'want') { m.want = !m.want; if (m.want) m.now = false; }
+        if (k === 'now') { m.now = !m.now; if (m.now) { m.want = false; if (m.type === 'serie') m.season ||= 1; } }
+        if (k === 'fav') m.fav = !m.fav;
+        save(); renderAll(); paint();
+      };
+    },
+  });
+}
+// Nota de media a 5 estrellas: 10 botones (mitad izquierda y derecha de cada estrella)
+const bxRateHtml = r => `<div class="fld"><span>Nota</span><div class="bx-rate" data-rate><input type="hidden" name="rating" value="${r || 0}">
+  ${[0, 1, 2, 3, 4].map(i => `<span class="bx-rs"><i class="ph ph-star"></i><i class="bx-on"></i><button type="button" data-v="${2 * i + 1}" aria-label="${(i + .5).toLocaleString('es')} estrellas"></button><button type="button" data-v="${2 * i + 2}" aria-label="${i + 1} ${i ? 'estrellas' : 'estrella'}"></button></span>`).join('')}
+  <small data-rate-l></small></div></div>`;
+function bxRateBind(f) {
+  const box = $('[data-rate]', f), inp = $('[name="rating"]', box), lbl = $('[data-rate-l]', box);
+  const paint = v => {
+    $$('.bx-on', box).forEach((el, k) => { el.className = 'bx-on ' + (v >= 2 * k + 2 ? 'ph-fill ph-star' : v === 2 * k + 1 ? 'ph-fill ph-star-half' : ''); });
+    lbl.textContent = v ? `${(v / 2).toLocaleString('es')} de 5` : 'Sin nota';
+  };
+  box.onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; const v = Number(b.dataset.v); inp.value = Number(inp.value) === v ? 0 : v; paint(Number(inp.value)); };
+  box.onpointerover = e => { const b = e.target.closest('[data-v]'); if (b) paint(Number(b.dataset.v)); };
+  box.onpointerleave = () => paint(Number(inp.value));
+  paint(Number(inp.value));
+}
+function bxLogModal(m, l = null, season = null) {
+  const b = BX[m.type], isSerie = m.type === 'serie', seen = S.mediaLog.filter(x => x.media === m.id);
+  const next = Math.min(Math.max(0, ...seen.map(x => x.season || 0)) + 1, m.seasons || Infinity);
+  const s0 = l?.season || season || (isSerie ? (m.now && m.season) || next : null);
+  const x = l || { date: ymd(new Date()), rating: 0, review: '', again: isSerie ? seen.some(y => y.season === s0) : seen.length > 0 };
+  const seasonFld = !isSerie ? '' : m.seasons && s0 <= m.seasons
+    ? `<label class="fld"><span>Temporada</span><select name="season">${Array.from({ length: m.seasons }, (_, i) => `<option value="${i + 1}" ${i + 1 === s0 ? 'selected' : ''}>Temporada ${i + 1}</option>`).join('')}</select></label>`
+    : `<label class="fld"><span>Temporada</span><input type="number" name="season" min="1" max="99" value="${s0 || 1}"></label>`;
+  openModal(l ? 'Editar registro' : 'Registrar', `
+    <div class="bx-mhead">${bxArt(m, 'sm')}<div><strong>${esc(m.title)}</strong><small>${[b.one, m.year, m.by].filter(Boolean).map(esc).join(' · ')}</small></div>
+      <button type="button" class="btn btn-sm" data-ficha>Ficha</button></div>
+    <div class="${isSerie ? 'row2' : ''}"><label class="fld"><span>${m.type === 'libro' ? 'Lo terminé el' : 'Lo vi el'}</span><input type="date" name="date" required value="${x.date}"></label>${seasonFld}</div>
+    ${bxRateHtml(x.rating)}
+    <label class="fld"><span>Reseña</span><textarea name="review" rows="4" placeholder="¿Qué te pareció?">${esc(x.review)}</textarea></label>
+    <div class="btns"><label class="toggle"><input type="checkbox" name="again" ${x.again ? 'checked' : ''}> <span>${b.again}</span></label>
+      <label class="toggle"><input type="checkbox" name="fav" ${m.fav ? 'checked' : ''}> <span>Favorito</span></label></div>`, {
+    saveLabel: l ? 'Guardar' : 'Registrar',
+    onSave: fd => {
+      const sn = isSerie ? clamp(parseInt(fd.get('season')) || 1, 1, 99) : null;
+      const data = { date: fd.get('date'), rating: Number(fd.get('rating')) || 0, review: fd.get('review').trim(), again: fd.get('again') === 'on', season: sn };
+      if (l) Object.assign(l, data);
+      else {
+        S.mediaLog.push({ id: uid(), media: m.id, created: Date.now(), ...data });
+        m.want = false;
+        // Serie: si quedan temporadas, sigue "Viendo" en la próxima
+        if (isSerie && m.seasons && sn < m.seasons) { m.now = true; m.season = sn + 1; } else { m.now = false; m.season = null; }
+        toast({ title: 'Registrado', text: m.title + (sn ? ` · Temporada ${sn}` : ''), icon: 'check-circle' });
+      }
+      m.fav = fd.get('fav') === 'on';
+      save(); renderAll();
+    },
+    onDelete: l ? () => { S.mediaLog = S.mediaLog.filter(y => y !== l); save(); renderAll(); } : null,
+    onOpen: f => { bxRateBind(f); $('[data-ficha]', f).onclick = () => { modal.close(); bxModal(m); }; },
+  });
+}
+function bxEditModal(m = null, type = 'peli', title = '') {
+  const x = m || { type, title, year: '', by: '', cover: '', seasons: null, pages: null };
+  openModal(m ? 'Editar datos' : 'Agregar a mano', `
+    <label class="fld"><span>Título</span><input name="title" required maxlength="160" value="${esc(x.title)}"></label>
+    <div class="row2">
+      <label class="fld"><span>Tipo</span><select name="type">${Object.entries(BX).map(([k, b]) => `<option value="${k}" ${k === x.type ? 'selected' : ''}>${b.one}</option>`).join('')}</select></label>
+      <label class="fld"><span>Año</span><input name="year" inputmode="numeric" maxlength="4" value="${esc(x.year)}"></label>
+    </div>
+    <div class="row2">
+      <label class="fld"><span>Autor, director o canal</span><input name="by" maxlength="120" value="${esc(x.by)}"></label>
+      <label class="fld"><span>Temporadas o páginas</span><input type="number" name="n" min="1" max="9999" value="${(x.type === 'serie' ? x.seasons : x.pages) || ''}"></label>
+    </div>
+    <label class="fld"><span>Portada (link de la imagen, opcional)</span><input name="cover" type="url" maxlength="500" value="${esc(x.cover)}" placeholder="https://…"></label>`, {
+    onSave: fd => {
+      const t = fd.get('type'), n = parseInt(fd.get('n')) || null;
+      const data = { type: t, title: fd.get('title').trim(), year: fd.get('year').trim(), by: fd.get('by').trim(), cover: fd.get('cover').trim(),
+        seasons: t === 'serie' ? n : null, pages: t === 'libro' ? n : null };
+      const it = m ? Object.assign(m, data) : bxUpsert(t, { ...data, src: '' });
+      if (!m) Object.assign(it, data);
+      save(); renderAll();
+      setTimeout(() => bxModal(it));   // openModal cierra el modal después de onSave
+    },
+  });
+}
+function bxAddModal(type) {
+  openModal('Agregar', `
+    <div class="seg bx-types">${Object.entries(BX).map(([k, b]) => `<button type="button" class="${k === type ? 'on' : ''}" data-t="${k}" aria-pressed="${k === type}">${ic(b.icon)} ${b.one}</button>`).join('')}</div>
+    <div class="rem-form" style="margin-top:12px"><input class="inp" name="q" type="search" placeholder="Título…" autocomplete="off" aria-label="Buscar título">
+      <button type="button" class="btn btn-primary btn-sm" data-go>${ic('magnifying-glass')} Buscar</button></div>
+    <div class="bx-res" data-res></div>
+    <p class="hint"><button type="button" class="linkish" data-manual>¿No aparece? Agrégalo a mano</button></p>`, {
+    noSave: true,
+    onOpen: f => {
+      const q = $('[name="q"]', f), res = $('[data-res]', f);
+      let run = 0;
+      const search = async () => {
+        const text = q.value.trim(), id = ++run, t = type;
+        if (!text) return;
+        res.innerHTML = '<p class="hint">Buscando…</p>';
+        try {
+          const list = await bxSearch(t, text);
+          if (id !== run) return;
+          bxResults = list;
+          res.innerHTML = list.length ? list.map((x, i) => `<div class="bx-r">${bxArt({ ...x, type: t }, 'sm')}
+            <div class="bx-r-t"><strong>${esc(x.title)}</strong><small>${[x.year, x.by].filter(Boolean).map(esc).join(' · ')}</small>${S.media.some(m => m.src === x.src) ? `<small class="bx-had">${ic('check')} Ya está en tu bitácora</small>` : ''}</div>
+            <div class="bx-r-b"><button type="button" class="btn btn-sm btn-primary" data-pick="log" data-i="${i}">${BX[t].done}</button><button type="button" class="btn btn-sm" data-pick="want" data-i="${i}">${BX[t].want}</button><button type="button" class="btn btn-sm" data-pick="now" data-i="${i}">${BX[t].now}</button></div></div>`).join('')
+            : '<p class="hint">Sin resultados. Prueba con otro título o agrégalo a mano.</p>';
+        } catch { if (id === run) res.innerHTML = '<p class="hint">No pude buscar (¿sin conexión?). Puedes agregarlo a mano.</p>'; }
+      };
+      // Enter no envía el formulario del modal (lo cerraría): busca
+      q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); search(); } };
+      $('.modal-b', f).onclick = async e => {
+        const tb = e.target.closest('[data-t]');
+        if (tb) {
+          type = tb.dataset.t; run++; res.innerHTML = '';
+          $$('[data-t]', f).forEach(el => { el.classList.toggle('on', el === tb); el.setAttribute('aria-pressed', el === tb); });
+          q.focus(); if (q.value.trim()) search();
+          return;
+        }
+        if (e.target.closest('[data-go]')) { search(); return; }
+        if (e.target.closest('[data-manual]')) { modal.close(); bxEditModal(null, type, q.value.trim()); return; }
+        const p = e.target.closest('[data-pick]');
+        if (!p) return;
+        const x = bxResults[p.dataset.i], m = bxUpsert(type, x), k = p.dataset.pick;
+        if (m.type === 'serie' && !m.seasons && x.tvm) { p.disabled = true; await bxSeasons(m, x.tvm); }
+        if (k === 'log') { modal.close(); bxLogModal(m); return; }
+        if (k === 'want') { m.want = true; m.now = false; } else { m.now = true; m.want = false; if (m.type === 'serie') m.season ||= 1; }
+        save(); renderAll();
+        p.closest('.bx-r-b').innerHTML = `<span class="bx-had">${ic('check')} ${BX[m.type][k]}</span>`;
+      };
+    },
+  });
+}
+Object.assign(ACT, {
+  bxAdd: () => bxAddModal(bxType === 'todo' ? 'peli' : bxType),
+  bxType: el => { bxType = el.dataset.t; renderAll(); },
+  bxTab: el => { bxTab = el.dataset.t; renderAll(); },
+  bxOpen: el => { const m = findById(S.media, el.dataset.id); m && bxModal(m); },
+  bxLog: el => { const l = findById(S.mediaLog, el.dataset.id), m = l && findById(S.media, l.media); m && bxLogModal(m, l); },
+});
+Object.assign(CHG, {
+  bxSort: el => { bxSort = el.value; renderAll(); },
+  bxYear: el => { bxYear = Number(el.value); renderAll(); },
+});
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -4714,6 +5097,8 @@ const searchSources = () => [
       open: () => { const k = isRep(e) ? nextOcc(e, ymd(new Date())) || e.date : e.date; if (k) { pDate = fromYmd(k); S.plannerView = 'dia'; } go('planner'); eventModal(e); } })) },
   { label: 'Tareas', icon: 'list-checks', items: () => S.todos.map(t => ({ title: t.text, sub: [findById(S.todoLists, t.list)?.name || 'General', t.due ? shortDate(t.due) : '', t.done ? 'Hecha' : 'Pendiente'].filter(Boolean).join(' · '),
       fields: [t.text, t.notes], open: () => { S.todoList = t.list; go('tareas'); tdModal(t); } })) },
+  { label: 'Bitácora', icon: 'popcorn', items: () => S.media.map(m => ({ title: m.title, sub: [BX[m.type].one, m.year, m.by].filter(Boolean).join(' · '),
+      fields: [m.title, m.by, ...S.mediaLog.filter(l => l.media === m.id).map(l => l.review)], open: () => { go('bitacora'); bxModal(m); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
@@ -4761,7 +5146,7 @@ const searchSources = () => [
 function runSearch(q) {
   const box = $('#srResults'), toks = sNorm(q).trim().split(/\s+/).filter(Boolean);
   searchRes = []; searchActive = 0;
-  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, tareas, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
+  if (!toks.length) { box.innerHTML = '<p class="hint sr-empty">Busca en actividades, tareas, libros y películas, clases, versículos, alumnas, lugares, cumpleaños, finanzas, mapas y más.</p>'; return; }
   let html = '';
   for (const src of searchSources()) {
     const hits = [];
