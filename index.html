@@ -770,7 +770,7 @@
   .lock-box h1 { margin: 0; font-family: var(--font-display); font-size: 30px; }
   .lock-box .hint { margin: 0; }
   .lock-in { text-align: center; font-size: 22px; letter-spacing: .3em; }
-  .lock-box .btn-primary { width: 100%; justify-content: center; }
+  .lock-box .btn-primary, .lock-box [data-bio] { width: 100%; justify-content: center; }
   .lock-err { min-height: 1.2em; margin: 0; color: var(--danger); font-weight: 700; font-size: 14px; }
 
   /* Tareas */
@@ -6870,7 +6870,8 @@ ACT.install = async () => {
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- Bloqueo con PIN o contraseña ---------- */
-// Solo en este dispositivo: localStorage['convalaria-lock'] = { kind: pin|pass, salt, hash (PBKDF2-SHA256), iter, after (minutos sin uso; 0 = al salir) }.
+// Solo en este dispositivo: localStorage['convalaria-lock'] = { kind: pin|pass, salt, hash (PBKDF2-SHA256), iter, after (minutos sin uso; 0 = al salir),
+//   bio: { id, pk (SPKI), alg } opcional = huella o Face ID con WebAuthn (credencial del dispositivo; la clave sigue de respaldo) }.
 // Protege ante quien tome el equipo: los datos no se cifran. No se sincroniza ni va en los respaldos.
 // sessionStorage['convalaria-active'] = último uso (el <script> de <head> decide si arrancar bloqueada).
 const LOCK_KEY = 'convalaria-lock', LOCK_ACTIVE = 'convalaria-active', LOCK_FAILS = 'convalaria-lock-fails';
@@ -6880,14 +6881,15 @@ let lockConf = lockRead(), lockActiveAt = Date.now(), lockResolve = null;
 const isLocked = () => document.documentElement.classList.contains('locked');
 const lockCan = () => !!window.crypto?.subtle;
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
 async function lockHash(secret, salt, iter) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveBits']);
-  return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: Uint8Array.from(atob(salt), c => c.charCodeAt(0)), iterations: iter }, key, 256));
+  return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(salt), iterations: iter }, key, 256));
 }
 const lockCheck = async secret => !!lockConf && await lockHash(secret, lockConf.salt, lockConf.iter) === lockConf.hash;
 async function lockStore(kind, secret, after) {
   const salt = b64(crypto.getRandomValues(new Uint8Array(16))), iter = 150000;
-  lockConf = { kind, salt, iter, hash: await lockHash(secret, salt, iter), after };
+  lockConf = { kind, salt, iter, hash: await lockHash(secret, salt, iter), after, bio: lockConf?.bio };
   localStorage.setItem(LOCK_KEY, JSON.stringify(lockConf));
   lockTouch(true);
 }
@@ -6896,6 +6898,60 @@ function lockTouch(force) {
   if (!force && now - lockActiveAt < 5000) return;
   lockActiveAt = now;
   try { sessionStorage.setItem(LOCK_ACTIVE, now); } catch {}
+}
+// Huella o Face ID (WebAuthn, autenticador del dispositivo). Se verifica la firma con la clave pública guardada.
+let lockBioOk = false, lockBioAbort = null;
+window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.().then(v => { lockBioOk = v; }).catch(() => {});
+function derToRaw(der) {   // firma ECDSA en DER → r‖s de 32 bytes cada uno
+  const d = new Uint8Array(der), out = new Uint8Array(64);
+  let i = d[1] & 0x80 ? 2 + (d[1] & 0x7f) : 2;
+  [0, 32].forEach(at => {
+    i++; const len = d[i++];
+    let v = d.slice(i, i + len); i += len;
+    while (v.length > 32 && v[0] === 0) v = v.slice(1);
+    out.set(v, at + 32 - v.length);
+  });
+  return out;
+}
+async function lockBio() {
+  const b = lockConf?.bio;
+  if (!b) return false;
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  lockBioAbort?.abort(); lockBioAbort = new AbortController();
+  const cred = await navigator.credentials.get({ signal: lockBioAbort.signal, publicKey: { challenge, allowCredentials: [{ type: 'public-key', id: unb64(b.id) }], userVerification: 'required', timeout: 60000 } });
+  const r = cred?.response;
+  if (!r) return false;
+  const cd = JSON.parse(new TextDecoder().decode(r.clientDataJSON)), ad = new Uint8Array(r.authenticatorData);
+  if (cd.type !== 'webauthn.get' || cd.challenge !== b64(challenge).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') || cd.origin !== location.origin) return false;
+  if (!(ad[32] & 0x04)) return false;   // UV: el dispositivo verificó huella, rostro o su clave
+  const data = new Uint8Array([...ad, ...new Uint8Array(await crypto.subtle.digest('SHA-256', r.clientDataJSON))]);
+  const es = b.alg === -7, algo = es ? { name: 'ECDSA', namedCurve: 'P-256' } : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+  const key = await crypto.subtle.importKey('spki', unb64(b.pk), algo, false, ['verify']);
+  return crypto.subtle.verify(es ? { name: 'ECDSA', hash: 'SHA-256' } : algo, key, es ? derToRaw(r.signature) : r.signature, data);
+}
+async function lockBioTry(show) {
+  try {
+    if (await lockBio()) { localStorage.removeItem(LOCK_FAILS); unlock(); return; }
+    if (show) lockRender('No se pudo verificar');
+  } catch (e) { if (show && !['NotAllowedError', 'AbortError'].includes(e.name)) lockRender('No se pudo usar la huella o Face ID'); }   // cancelar no es error
+}
+async function lockBioOn() {
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'Convalaria' },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'Convalaria', displayName: 'Convalaria' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      attestation: 'none', timeout: 60000 } });
+    const pk = cred.response.getPublicKey?.(), alg = cred.response.getPublicKeyAlgorithm?.();
+    if (!pk || ![-7, -257].includes(alg)) throw new Error('sin clave pública');
+    lockConf.bio = { id: b64(cred.rawId), pk: b64(pk), alg };
+    localStorage.setItem(LOCK_KEY, JSON.stringify(lockConf));
+    toast({ title: 'Huella o Face ID activado', text: 'En la pantalla de bloqueo toca "Usar huella o Face ID". Tu clave sigue sirviendo.', icon: 'fingerprint' });
+    renderAll();
+  } catch (e) {
+    if (e.name !== 'NotAllowedError') toast({ title: 'No se pudo activar', text: 'Este navegador o dispositivo no permite usar huella o Face ID aquí.', icon: 'warning' });
+  }
 }
 // Intentos fallidos: desde el 5.º, espera creciente (30 s, 1 min, 2 min… hasta 15 min)
 const lockFails = () => { try { return JSON.parse(localStorage.getItem(LOCK_FAILS)) || { n: 0, until: 0 }; } catch { return { n: 0, until: 0 }; } };
@@ -6912,9 +6968,12 @@ function lockRender(msg = '') {
     <p class="hint">${wait ? `Demasiados intentos. Espera ${wait} s.` : `Ingresa tu ${what}`}</p>
     <input class="inp lock-in" type="password" name="secret" ${pin ? 'inputmode="numeric" maxlength="12"' : 'maxlength="64"'} autocomplete="current-password" aria-label="${cap(what)}" ${wait ? 'disabled' : ''}>
     <button class="btn btn-primary" ${wait ? 'disabled' : ''}>${ic('lock-open')} Entrar</button>
+    ${lockConf.bio && window.PublicKeyCredential ? `<button type="button" class="btn" data-bio>${ic('fingerprint')} Usar huella o Face ID</button>` : ''}
     <p class="lock-err" role="alert">${esc(msg)}</p>
     <button type="button" class="linkish" data-forgot>¿Olvidaste tu ${what}?</button></form>`;
   const f = $('form', lockEl), inp = f.elements.secret;
+  const bio = $('[data-bio]', f);
+  if (bio) bio.onclick = () => lockBioTry(true);
   if (wait) setTimeout(() => isLocked() && lockRender(), wait * 1000);
   else setTimeout(() => inp.focus(), 30);
   f.onsubmit = async e => {
@@ -6952,12 +7011,14 @@ function unlock() {
   document.documentElement.classList.remove('locked');
   $('.app').inert = false;
   lockEl.innerHTML = '';
+  lockBioAbort?.abort(); lockBioAbort = null;
   lockTouch(true);
   if (lockResolve) { lockResolve(); lockResolve = null; }
   fmProjSend();
 }
 // Espera la clave antes del primer render (init)
-const lockGate = () => isLocked() && lockConf ? new Promise(r => { lockResolve = r; $('.app').inert = true; lockRender(); }) : (document.documentElement.classList.remove('locked'), Promise.resolve());
+// Con huella o Face ID la intenta sola al abrir (Safari en iPhone exige tocar el botón: ese error se ignora)
+const lockGate = () => isLocked() && lockConf ? new Promise(r => { lockResolve = r; $('.app').inert = true; lockRender(); if (lockConf.bio) lockBioTry(false); }) : (document.documentElement.classList.remove('locked'), Promise.resolve());
 function lockTick() {
   if (lockConf && !isLocked() && lockConf.after > 0 && Date.now() - lockActiveAt > lockConf.after * 60000) lockNow();
 }
@@ -6975,7 +7036,9 @@ function lockCardHtml() {
     <p class="hint" style="margin-top:8px">${c ? `Activado en este dispositivo con ${c.kind === 'pin' ? 'PIN' : 'contraseña'}.` : 'Pide un PIN o contraseña para abrir Convalaria en este dispositivo.'} Cada dispositivo tiene su propio bloqueo.</p>
     ${!lockCan() ? '<p class="hint">Disponible solo al abrirla desde su dirección web (https).</p>'
       : c ? `<label class="fld"><span>Bloquear</span><select data-chg="lockAfter">${LOCK_AFTER.map(([v, l]) => `<option value="${v}" ${v === c.after ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <div class="btns"><button class="btn btn-primary" data-act="lockNow">${ic('lock-simple')} Bloquear ahora</button><button class="btn" data-act="lockSet">Cambiar clave</button><button class="btn btn-danger" data-act="lockOff">Quitar</button></div>`
+        <div class="btns"><button class="btn btn-primary" data-act="lockNow">${ic('lock-simple')} Bloquear ahora</button><button class="btn" data-act="lockSet">Cambiar clave</button><button class="btn btn-danger" data-act="lockOff">Quitar</button></div>
+        ${c.bio ? `<p class="hint">${ic('fingerprint')} Huella o Face ID activado en este dispositivo; tu clave sigue sirviendo.</p><div class="btns"><button class="btn" data-act="lockBioOff">Quitar huella o Face ID</button></div>`
+          : lockBioOk ? `<div class="btns"><button class="btn" data-act="lockBioOn">${ic('fingerprint')} Usar huella o Face ID</button></div>` : ''}`
       : `<div class="btns"><button class="btn btn-primary" data-act="lockSet">${ic('lock-simple')} Activar bloqueo</button></div>`}`;
 }
 function lockSetModal() {
@@ -7012,6 +7075,12 @@ function lockSetModal() {
 Object.assign(ACT, {
   lockSet: () => lockSetModal(),
   lockNow: () => lockNow(),
+  lockBioOn: () => lockBioOn(),
+  lockBioOff: () => {
+    if (!confirm('¿Dejar de usar huella o Face ID? Seguirá pidiendo tu clave.')) return;
+    delete lockConf.bio; localStorage.setItem(LOCK_KEY, JSON.stringify(lockConf));
+    toast({ title: 'Huella o Face ID quitado', icon: 'lock-simple' }); renderAll();
+  },
   lockOff: () => openModal('Quitar bloqueo', `<label class="fld"><span>${lockConf.kind === 'pin' ? 'PIN' : 'Contraseña'} actual</span><input type="password" name="cur" required autocomplete="current-password" ${lockConf.kind === 'pin' ? 'inputmode="numeric"' : ''}></label>`, {
     saveLabel: 'Quitar',
     onSave: fd => {
