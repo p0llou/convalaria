@@ -911,6 +911,30 @@
   .fm-key span { display: inline-block; width: 22px; margin-left: 6px; border-top: 2px solid var(--muted); }
   .fm-key .k-c { border-top: 3px solid var(--accent-strong); }
   .fm-key .k-f { border-top-style: dotted; }
+  #view-familias:fullscreen { overflow: auto; padding: 18px 22px; background: var(--bg); }
+  #view-familias:fullscreen .page-h .sub, #view-familias:fullscreen .bx-tabs { display: none; }
+  #view-familias:fullscreen .fm-wrap { height: calc(100dvh - 190px); min-height: 300px; }
+  /* Ventana de proyección (?proyectar): solo la red, sin menús */
+  html.proj .app, html.proj #bgPhoto { display: none; }
+  html.locked #proj { display: none; }
+  #proj { position: fixed; inset: 0; display: flex; flex-direction: column; background-color: var(--accent-softer); background-image: radial-gradient(var(--line) 1.2px, transparent 1.6px); background-size: 22px 22px; color: var(--ink); }
+  #proj:not(.awake) { cursor: none; }
+  #proj.off > * { visibility: hidden; }
+  .proj-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 14px 20px 0; }
+  .proj-top img { width: 34px; height: 34px; margin-right: 4px; }
+  .proj-top .fm-chip { cursor: default; }
+  .proj-top .fm-key { margin: 0 0 0 auto; }
+  .proj-stage { position: relative; flex: 1; overflow: hidden; }
+  .proj-stage .fm-inner { transition: transform .6s ease; }
+  .proj-stage .fn { cursor: default; }
+  .proj-cap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: 999px;
+    background: var(--surface-solid); border: 2px solid var(--fc); box-shadow: var(--shadow); font-size: 20px; font-weight: 800; white-space: nowrap; }
+  .proj-cap .fm-av { width: 46px; height: 46px; font-size: 16px; }
+  .proj-empty { display: grid; place-items: center; align-content: center; gap: 10px; height: 100%; color: var(--muted); font-weight: 700; }
+  .proj-empty img { width: 90px; }
+  .proj-full { position: absolute; right: 18px; bottom: 18px; opacity: 0; pointer-events: none; transition: opacity .3s; }
+  #proj.awake .proj-full { opacity: 1; pointer-events: auto; }
+  :root:fullscreen .proj-full { display: none; }
   .fm-selcard { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
   .fm-selcard > div:not(.btns) { flex: 1 1 160px; min-width: 0; }
   .fm-selcard .btns { margin: 0; }
@@ -4628,6 +4652,11 @@ const FM_COLORS = ['#cf5a8a', '#7d5fcf', '#d4724a', '#3a9674', '#4a84c4', '#a877
 const FM_CW = 124, FM_CH = 128, FM_HG = 22, FM_UG = 30, FM_VG = 64, FM_PAD = 80;
 let fmTab = 'arbol', fmFocus = null, fmSel = null, fmFam = null, fmPath = null, fmA = null, fmB = null, fmQuery = '', fmChurch = 'todos';
 const fmZoom = { arbol: 1, red: 1 };
+// Proyección: otra ventana (index.html?proyectar) muestra solo la red. Se actualiza al guardar (evento storage)
+// y copia lo destacado aquí (BroadcastChannel); "Pausar" congela lo que se ve mientras se edita.
+const FM_PROJ = new URLSearchParams(location.search).has('proyectar');
+const fmChan = 'BroadcastChannel' in window ? new BroadcastChannel('convalaria-proyector') : null;
+let fmProjOn = false, fmProjPaused = false, fmProjWin = null;
 const fmP = id => findById(S.people, id);
 const fmFull = p => [p.name, p.last1, p.last2].filter(Boolean).join(' ');
 const fmShort = p => [p.name.trim().split(/\s+/)[0], p.last1].filter(Boolean).join(' ');
@@ -4809,7 +4838,7 @@ function fmNetEnsure(all = false) {
     placed.add(id);
   });
   fmSimulate(missing, missing.length === S.people.length ? 400 : 160);
-  save();
+  if (!FM_PROJ) save();   // la ventana de proyección nunca guarda
 }
 function fmHighlight() {   // { nodes, edges } a destacar, o null
   if (fmPath?.length) {
@@ -4828,6 +4857,12 @@ function fmHighlight() {   // { nodes, edges } a destacar, o null
   if (fmChurch !== 'todos') return { nodes: new Set(S.people.filter(p => p.church === fmChurch).map(p => p.id)), edges: new Set() };
   return null;
 }
+function fmFams() {   // [[clave, { name, p, n }]] por cantidad de personas
+  const fams = {};
+  S.people.forEach(p => { const k = fmFamKey(p); if (k) (fams[k] ||= { name: p.last1.trim(), p, n: 0 }).n++; });
+  return Object.entries(fams).sort((a, b) => b[1].n - a[1].n || a[1].name.localeCompare(b[1].name, 'es'));
+}
+const fmKeyHtml = (extra = '') => `<p class="hint fm-key"><span class="k-p"></span> padres e hijos <span class="k-c"></span> pareja <span class="k-f"></span> amistad${extra}</p>`;
 function fmNetHtml() {
   fmNetEnsure();
   const P = S.netPos, xs = S.people.map(p => P[p.id][0]), ys = S.people.map(p => P[p.id][1]);
@@ -4912,6 +4947,105 @@ function fmSetZoom(z) {
   fmDraw($('#view-familias'));
   wrap.scrollLeft = cx * fmZoom[fmTab] - wrap.clientWidth / 2; wrap.scrollTop = cy * fmZoom[fmTab] - wrap.clientHeight / 2;
   fmScroll[fmTab] = [wrap.scrollLeft, wrap.scrollTop, fmFocus];
+}
+
+/* Proyección de la red */
+function fmProjSend() {
+  if (FM_PROJ || !fmChan) return;
+  fmChan.postMessage(isLocked() ? { t: 'lock' } : { t: 'state', sel: fmSel, fam: fmFam, path: fmPath, church: fmChurch, paused: fmProjPaused });
+}
+function fmProjOpen() {
+  if (fmProjWin && !fmProjWin.closed) { fmProjWin.focus(); return; }
+  const w = fmProjWin = window.open(location.pathname + '?proyectar', 'convalaria-proyector', 'popup,width=1100,height=700');
+  if (!w) { toast({ title: 'No se abrió la ventana', text: 'Permite las ventanas emergentes para este sitio y vuelve a intentar.', icon: 'warning' }); return; }
+  // Con dos pantallas (Chrome, con permiso): la lleva a la otra pantalla
+  window.getScreenDetails?.().then(sd => {
+    const sc = sd.screens.find(x => x !== sd.currentScreen);
+    if (sc) { w.moveTo(sc.availLeft, sc.availTop); w.resizeTo(sc.availWidth, sc.availHeight); }
+  }).catch(() => {});
+}
+if (fmChan && !FM_PROJ) {
+  fmChan.onmessage = ({ data: m }) => {
+    if (m.t !== 'hello' && m.t !== 'bye') return;
+    const on = m.t === 'hello';
+    if (on !== fmProjOn) {
+      fmProjOn = on; fmProjPaused = false;
+      if (current === 'familias' && fmTab === 'red') renderAll();
+    }
+    if (on) fmProjSend();
+  };
+  fmChan.postMessage({ t: 'ping' });   // por si la ventana de proyección quedó abierta al recargar
+}
+// En la ventana ?proyectar: encuadra lo destacado (persona, familia o camino) o toda la red
+function fmProjDraw() {
+  const box = $('#proj'), stage = $('.proj-stage', box);
+  $('.proj-top', box).innerHTML = `<img src="icons/logo.svg" alt="">${fmFams().map(([k, f]) =>
+    `<span class="fm-chip ${fmFam === k ? 'on' : ''}" style="--fc:${fmColor(f.p)}"><i></i>${esc(f.name)} <small>${f.n}</small></span>`).join('')}${S.people.length ? fmKeyHtml() : ''}`;
+  if (!S.people.length) { stage.innerHTML = `<div class="proj-empty"><img src="icons/logo.svg" alt="">Todavía no hay personas</div>`; return; }
+  let inner = $('.fm-inner', stage);
+  if (!inner) { stage.innerHTML = '<div class="fm-inner"></div>'; inner = $('.fm-inner', stage); }
+  const d = fmNetHtml(), hl = fmHighlight(), P = S.netPos, sel = fmP(fmSel);
+  inner.className = 'fm-inner' + (d.dim ? ' fm-dim' : '');
+  inner.style.width = d.W + 'px'; inner.style.height = d.H + 'px';
+  inner.innerHTML = d.html;
+  $('.proj-cap', stage)?.remove();
+  if (sel && !fmPath?.length) stage.insertAdjacentHTML('beforeend', `<div class="proj-cap" style="--fc:${fmColor(sel)}">${fmAv(sel)}${esc(fmFull(sel))}</div>`);
+  const ids = hl && (fmPath?.length || sel || fmFam) ? [...hl.nodes] : S.people.map(p => p.id), pts = ids.filter(i => P[i]).map(i => P[i]);
+  const x0 = Math.min(...pts.map(q => q[0])) + d.ox - 90, x1 = Math.max(...pts.map(q => q[0])) + d.ox + 90;
+  const y0 = Math.min(...pts.map(q => q[1])) + d.oy - 70, y1 = Math.max(...pts.map(q => q[1])) + d.oy + (sel ? 140 : 80);
+  const w = stage.clientWidth, h = stage.clientHeight, z = Math.min(w / (x1 - x0), h / (y1 - y0), 2.2);
+  inner.style.transform = `translate(${(w - (x1 - x0) * z) / 2 - x0 * z}px, ${(h - (y1 - y0) * z) / 2 - y0 * z}px) scale(${z})`;
+}
+let fmProjStale = false, fmProjTimer = null;
+function fmProjReload() {
+  if (fmProjPaused) { fmProjStale = true; return; }
+  fmProjStale = false;
+  clearTimeout(fmProjTimer);
+  fmProjTimer = setTimeout(async () => {
+    S = load(); applyDecor();
+    await Promise.all(S.people.filter(p => p.photo).map(p => imgStore.get(p.photo)));
+    fmProjDraw();
+  }, 150);
+}
+function fmProjStart() {
+  document.documentElement.classList.add('proj');
+  document.title = 'Red · Convalaria';
+  const box = document.createElement('div');
+  box.id = 'proj';
+  box.innerHTML = `<div class="proj-top"></div><div class="proj-stage"></div>
+    <button class="btn proj-full" type="button">${ic('corners-out')} Pantalla completa <small>(doble clic o F)</small></button>`;
+  document.body.append(box);
+  fmProjDraw();
+  const full = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {});
+  box.ondblclick = full;
+  $('.proj-full', box).onclick = full;
+  // Ningún atajo de la app (buscar, etc.) en esta ventana; solo F
+  addEventListener('keydown', e => {
+    if (isLocked()) return;
+    e.stopImmediatePropagation();
+    if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); full(); }
+  }, true);
+  let idle;
+  const wake = () => { box.classList.add('awake'); clearTimeout(idle); idle = setTimeout(() => box.classList.remove('awake'), 2500); };
+  addEventListener('pointermove', wake); wake();
+  addEventListener('resize', fmProjDraw);
+  addEventListener('storage', e => { if (e.key === KEY) fmProjReload(); });
+  if (!fmChan) return;
+  fmChan.onmessage = ({ data: m }) => {
+    if (m.t === 'ping') fmChan.postMessage({ t: 'hello' });
+    else if (m.t === 'close') close();
+    else if (m.t === 'lock') box.classList.add('off');   // la app se bloqueó: no mostrar nada
+    else if (m.t === 'state') {
+      box.classList.remove('off');
+      const was = fmProjPaused;
+      fmProjPaused = m.paused;
+      if (fmProjPaused) return;   // congelada hasta "Reanudar"
+      fmSel = m.sel; fmFam = m.fam; fmPath = m.path; fmChurch = m.church;
+      if (was && fmProjStale) fmProjReload(); else fmProjDraw();
+    }
+  };
+  addEventListener('pagehide', () => fmChan.postMessage({ t: 'bye' }));
+  fmChan.postMessage({ t: 'hello' });
 }
 
 /* Parentesco: camino más corto (sangre primero, luego pareja, amistad al final) y nombre en español */
@@ -5043,21 +5177,24 @@ function renderFamilias(root) {
         ${fmP(S.meId) && S.meId !== f.id ? `<button class="btn btn-sm" data-act="fmTreeOf" data-id="${S.meId}">${ic('heart')} Yo</button>` : ''}${zoom}</div>
       <div class="fm-wrap" tabindex="0" aria-label="Árbol familiar"></div>`;
   } else if (fmTab === 'red') {
-    const fams = {};
-    S.people.forEach(p => { const k = fmFamKey(p); if (k) (fams[k] ||= { name: p.last1.trim(), p, n: 0 }).n++; });
-    const sel = fmP(fmSel), ch = sel && FM_CHURCH[sel.church];
-    body = `<div class="fm-bar"><div class="fm-legend">${Object.entries(fams).sort((a, b) => b[1].n - a[1].n || a[1].name.localeCompare(b[1].name, 'es')).map(([k, f]) =>
+    const sel = fmP(fmSel), ch = sel && FM_CHURCH[sel.church], fs = !!document.fullscreenElement;
+    body = `<div class="fm-bar"><div class="fm-legend">${fmFams().map(([k, f]) =>
         `<button class="fm-chip ${fmFam === k ? 'on' : ''}" data-act="fmFam" data-k="${esc(k)}" style="--fc:${fmColor(f.p)}"><i></i>${esc(f.name)} <small>${f.n}</small></button>`).join('')}</div>
         <select class="inp fm-church" data-chg="fmChurch" aria-label="Destacar">${[['todos', 'Todas las personas'], ['hoy', 'Destacar: en la iglesia'], ['antes', 'Destacar: estuvieron antes']].map(([k, l]) => `<option value="${k}" ${fmChurch === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-        <button class="btn btn-sm" data-act="fmRelayout" title="Recalcular la posición de todos">${ic('shuffle')} Ordenar</button>${zoom}</div>
+        <button class="btn btn-sm" data-act="fmRelayout" title="Recalcular la posición de todos">${ic('shuffle')} Ordenar</button>
+        ${document.fullscreenEnabled ? `<button class="btn btn-sm" data-act="fmFull">${ic(fs ? 'corners-in' : 'corners-out')} ${fs ? 'Salir de pantalla completa' : 'Pantalla completa'}</button>` : ''}
+        ${fmProjOn ? `<button class="btn btn-sm ${fmProjPaused ? 'btn-primary' : ''}" data-act="fmProjPause" title="${fmProjPaused ? 'Mostrar los cambios en la proyección' : 'La proyección queda quieta mientras editas'}">${ic(fmProjPaused ? 'play' : 'pause')} ${fmProjPaused ? 'Reanudar proyección' : 'Pausar proyección'}</button>
+          <button class="btn btn-sm" data-act="fmProjClose">${ic('x')} Dejar de proyectar</button>`
+        : `<button class="btn btn-sm" data-act="fmProjOpen" title="Abre una ventana solo con la red para el proyector o la otra pantalla">${ic('projector-screen')} Proyectar</button>`}${zoom}</div>
       <div class="fm-wrap" tabindex="0" aria-label="Red de personas"></div>
-      <p class="hint fm-key"><span class="k-p"></span> padres e hijos <span class="k-c"></span> pareja <span class="k-f"></span> amistad · arrastra a alguien para moverlo</p>
+      ${fmKeyHtml(' · arrastra a alguien para moverlo')}
       ${sel ? `<section class="card fm-selcard" style="--fc:${fmColor(sel)}">${fmAv(sel)}<div><strong>${esc(fmFull(sel))}</strong><small class="hint" style="display:block;margin:0">${[ch?.[0], fmMinText(sel)].filter(Boolean).map(esc).join(' · ')}</small></div>
         <div class="btns"><button class="btn btn-sm" data-act="fmTreeOf" data-id="${sel.id}">${ic('tree')} Árbol</button><button class="btn btn-sm" data-act="fmEdit" data-id="${sel.id}">${ic('identification-card')} Ficha</button>
         <button class="btn btn-sm" data-act="fmAdd" data-id="${sel.id}">${ic('plus')} Vínculo</button><button class="btn btn-sm" data-act="fmKinWith" data-id="${sel.id}">${ic('arrows-left-right')} Parentesco</button></div></section>` : ''}`;
   } else body = fmTab === 'parentesco' ? fmKinHtml() : fmListHtml();
   root.innerHTML = head + body;
   fmDraw(root);
+  fmProjSend();
 }
 
 /* Fichas y vínculos */
@@ -5371,7 +5508,12 @@ Object.assign(ACT, {
   fmChurch: el => { fmChurch = el.dataset.c; renderAll(); },
   fmZoom: el => fmSetZoom(fmZoom[fmTab] + Number(el.dataset.z) * 0.15),
   fmRelayout: () => { if (confirm('¿Reordenar a todas las personas en la red? Se pierden las posiciones que moviste a mano.')) { fmNetEnsure(true); renderAll(); } },
+  fmFull: () => document.fullscreenElement ? document.exitFullscreen() : $('#view-familias').requestFullscreen().catch(() => {}),
+  fmProjOpen: () => fmProjOpen(),
+  fmProjPause: () => { fmProjPaused = !fmProjPaused; renderAll(); },
+  fmProjClose: () => { fmChan?.postMessage({ t: 'close' }); fmProjOn = false; fmProjPaused = false; renderAll(); },
 });
+document.addEventListener('fullscreenchange', () => { if (current === 'familias') renderAll(); });
 Object.assign(CHG, {
   fmA: el => { fmA = el.value; renderAll(); },
   fmB: el => { fmB = el.value; renderAll(); },
@@ -6510,7 +6652,7 @@ Object.assign(FORMS, {
     } catch (e) { setSync('error', e); renderSyncCard(); }
   },
 });
-fbLoad();
+if (!FM_PROJ) fbLoad();
 
 /* ---------- Búsqueda global ---------- */
 const sNorm = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -6804,6 +6946,7 @@ function lockNow() {
   document.documentElement.classList.add('locked');
   $('.app').inert = true;
   lockRender();
+  fmProjSend();
 }
 function unlock() {
   document.documentElement.classList.remove('locked');
@@ -6811,6 +6954,7 @@ function unlock() {
   lockEl.innerHTML = '';
   lockTouch(true);
   if (lockResolve) { lockResolve(); lockResolve = null; }
+  fmProjSend();
 }
 // Espera la clave antes del primer render (init)
 const lockGate = () => isLocked() && lockConf ? new Promise(r => { lockResolve = r; $('.app').inert = true; lockRender(); }) : (document.documentElement.classList.remove('locked'), Promise.resolve());
@@ -6889,6 +7033,7 @@ Object.assign(CHG, {
   await Promise.all(allImgIds().map(id => imgStore.get(id)));
   applyDecor();
   await lockGate();
+  if (FM_PROJ) return fmProjStart();
   go(current);
   tick();
   setInterval(tick, 200);
