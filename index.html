@@ -505,12 +505,29 @@
   .pg-box h2 { background: #000; color: #fff; font-size: 11pt; margin: 0; padding: 5px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pg-box p { margin: 0; padding: 8px 10px; white-space: pre-wrap; min-height: 70px; line-height: 1.5; overflow-wrap: anywhere; }
   .pg-full { margin-top: 10px; }
-  .pg-rows { padding: 6px 10px; }
-  .pg-rows div { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #ccc; }
+  /* Ficha de nacimiento imprimible: rosada, colores fijos (no dependen del tema ni del modo noche) */
+  .pg-ct { --pk: #e86a9a; --pk-soft: #fde2ec; --pk-line: #f5b5cc; --plum: #6e2a4a; color: #4a2a3a; background: #fff7fa; border: 2.5px solid var(--pk-line); border-radius: 26px; padding: 18px 22px 14px; position: relative; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pg-ct .ct-deco { position: absolute; width: 150px; opacity: .13; right: -24px; bottom: -20px; transform: rotate(-12deg); }
+  .pg-ct .ct-deco.l { left: -30px; top: -26px; right: auto; bottom: auto; width: 110px; transform: rotate(160deg); }
+  .pg-ct .ct-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 4px; }
+  .pg-ct .ct-head img { width: 54px; height: 54px; }
+  .pg-ct h1 { font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-weight: 600; font-size: 24pt; color: var(--pk); margin: 0; letter-spacing: 0; }
+  .pg-ct .ct-spark { color: var(--pk); font-size: 15pt; }
+  .pg-ct .ct-name { text-align: center; margin: 6px 0 4px; font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-size: 17pt; font-weight: 600; color: var(--plum); }
+  .pg-ct .ct-chips { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .pg-ct .ct-chip { background: var(--pk-soft); border: 1.5px solid var(--pk-line); border-radius: 999px; padding: 3px 12px; font-weight: 700; color: var(--plum); }
+  .pg-ct .ct-chip b { color: var(--pk); margin-right: 4px; }
+  .pg-ct .pg-box { border: 2px solid var(--pk-line); border-radius: 18px; background: #fff; }
+  .pg-ct .pg-box h2 { background: var(--pk-soft); color: var(--plum); font-family: var(--font-display); font-variation-settings: 'SOFT' 100, 'WONK' 1; font-weight: 600; font-size: 12.5pt; padding: 6px 12px; display: flex; align-items: center; gap: 6px; }
+  .pg-ct .pg-box h2 i { color: var(--pk); font-size: 14pt; }
+  .pg-ct .pg-box p { min-height: 0; }
+  .pg-rows { padding: 6px 12px; }
+  .pg-rows div { display: flex; gap: 8px; padding: 5px 0; border-bottom: 1.5px dotted var(--pk-line); }
   .pg-rows div:last-child { border-bottom: 0; }
-  .pg-rows b { flex: none; width: 42%; }
+  .pg-rows b { flex: none; width: 42%; color: var(--pk); font-weight: 700; }
   .pg-rows span { overflow-wrap: anywhere; }
-  .pg-foot { margin-top: 14px; font-size: 9pt; color: #555; text-align: center; }
+  .pg-foot { margin: 14px 0 0; font-size: 9pt; color: #9a6a80; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .pg-foot i { color: var(--pk); }
   @media print {
     @page { size: A4; margin: 14mm; }
     body { background: #fff !important; }
@@ -5550,27 +5567,29 @@ function renderCertificados(root) {
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); ctImport(e.dataTransfer.files); };
 }
 // Ficha imprimible con lo que muestra el formulario (incluye cambios sin guardar)
-function ctPrint(c) {
+async function ctPrint(c) {
   const v = k => esc(c[k] || ''), date = k => c[k] ? esc(ctLong(c[k])) : '';
   const rows = list => `<div class="pg-rows">${list.map(([l, x]) => `<div><b>${l}</b><span>${x}</span></div>`).join('')}</div>`;
-  const box = (title, list) => `<div class="pg-box"><h2>${title}</h2>${rows(list)}</div>`;
-  $('#printArea').innerHTML = `<div class="pg"><h1>FICHA DE NACIMIENTO</h1>
-    <div class="pg-top">
-      <div style="grid-column:1/-1"><b>Nombre:</b>${v('name')}</div>
-      <div><b>RUN:</b>${v('run')}</div><div><b>Sexo:</b>${v('sex')}</div>
-    </div>
+  const box = (icon, title, list) => `<div class="pg-box"><h2>${ic(icon, 'duotone')}${title}</h2>${rows(list)}</div>`;
+  const chips = [['RUN', v('run')], ['Sexo', v('sex')], ['Edad', c.born ? ctAge(c.born) + ' años' : '']].filter(([, x]) => x);
+  $('#printArea').innerHTML = `<div class="pg pg-ct">
+    <img class="ct-deco" src="icons/logo.svg" alt=""><img class="ct-deco l" src="icons/logo.svg" alt="">
+    <div class="ct-head"><span class="ct-spark">${ic('sparkle', 'fill')}</span><img src="icons/logo.svg" alt=""><h1>Ficha de nacimiento</h1><span class="ct-spark">${ic('heart', 'fill')}</span></div>
+    <p class="ct-name">${v('name') || 'Sin nombre'}</p>
+    ${chips.length ? `<div class="ct-chips">${chips.map(([l, x]) => `<span class="ct-chip"><b>${l}</b>${x}</span>`).join('')}</div>` : ''}
     <div class="pg-grid">
       <div class="pg-col">
-        ${box('Nacimiento', [['Fecha', date('born')], ['Hora', v('time')], ['Edad', c.born ? ctAge(c.born) + ' años' : ''], ['Circunscripción', v('place')]])}
-        ${box('Inscripción', [['Nro. inscripción', v('regNo')], ['Año inscripción', v('regYear')], ['Folio', v('folio')], ['Código de verificación', v('code')], ['Emitido', date('issued')]])}
+        ${box('baby', 'Nacimiento', [['Fecha', date('born')], ['Hora', v('time')], ['Circunscripción', v('place')]])}
+        ${box('stamp', 'Inscripción', [['Nro. inscripción', v('regNo')], ['Año inscripción', v('regYear')], ['Folio', v('folio')], ['Código de verificación', v('code')], ['Emitido', date('issued')]])}
       </div>
       <div class="pg-col">
-        ${box('Padre', [['Nombre', v('father')], ['RUN', v('fatherRun')]])}
-        ${box('Madre', [['Nombre', v('mother')], ['RUN', v('motherRun')]])}
+        ${box('heart', 'Mamá', [['Nombre', v('mother')], ['RUN', v('motherRun')]])}
+        ${box('heart', 'Papá', [['Nombre', v('father')], ['RUN', v('fatherRun')]])}
       </div>
     </div>
-    ${c.notes ? `<div class="pg-full"><div class="pg-box"><h2>Notas</h2><p>${v('notes')}</p></div></div>` : ''}
-    <p class="pg-foot">Impreso el ${esc(ctLong(ymd(new Date())))}. Resumen de datos; no reemplaza el certificado oficial.</p></div>`;
+    ${c.notes ? `<div class="pg-full"><div class="pg-box"><h2>${ic('note-pencil', 'duotone')}Notas</h2><p>${v('notes')}</p></div></div>` : ''}
+    <p class="pg-foot">${ic('flower-tulip', 'duotone')} Impreso el ${esc(ctLong(ymd(new Date())))} · Resumen de datos; no reemplaza el certificado oficial ${ic('flower-tulip', 'duotone')}</p></div>`;
+  await Promise.all($$('#printArea img').map(i => i.decode().catch(() => {})));
   window.print();
 }
 function ctModal(c = null) {
