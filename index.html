@@ -505,6 +505,12 @@
   .pg-box h2 { background: #000; color: #fff; font-size: 11pt; margin: 0; padding: 5px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pg-box p { margin: 0; padding: 8px 10px; white-space: pre-wrap; min-height: 70px; line-height: 1.5; overflow-wrap: anywhere; }
   .pg-full { margin-top: 10px; }
+  .pg-rows { padding: 6px 10px; }
+  .pg-rows div { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid #ccc; }
+  .pg-rows div:last-child { border-bottom: 0; }
+  .pg-rows b { flex: none; width: 42%; }
+  .pg-rows span { overflow-wrap: anywhere; }
+  .pg-foot { margin-top: 14px; font-size: 9pt; color: #555; text-align: center; }
   @media print {
     @page { size: A4; margin: 14mm; }
     body { background: #fff !important; }
@@ -5543,6 +5549,30 @@ function renderCertificados(root) {
   dz.ondragleave = () => dz.classList.remove('over');
   dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); ctImport(e.dataTransfer.files); };
 }
+// Ficha imprimible con lo que muestra el formulario (incluye cambios sin guardar)
+function ctPrint(c) {
+  const v = k => esc(c[k] || ''), date = k => c[k] ? esc(ctLong(c[k])) : '';
+  const rows = list => `<div class="pg-rows">${list.map(([l, x]) => `<div><b>${l}</b><span>${x}</span></div>`).join('')}</div>`;
+  const box = (title, list) => `<div class="pg-box"><h2>${title}</h2>${rows(list)}</div>`;
+  $('#printArea').innerHTML = `<div class="pg"><h1>FICHA DE NACIMIENTO</h1>
+    <div class="pg-top">
+      <div style="grid-column:1/-1"><b>Nombre:</b>${v('name')}</div>
+      <div><b>RUN:</b>${v('run')}</div><div><b>Sexo:</b>${v('sex')}</div>
+    </div>
+    <div class="pg-grid">
+      <div class="pg-col">
+        ${box('Nacimiento', [['Fecha', date('born')], ['Hora', v('time')], ['Edad', c.born ? ctAge(c.born) + ' años' : ''], ['Circunscripción', v('place')]])}
+        ${box('Inscripción', [['Nro. inscripción', v('regNo')], ['Año inscripción', v('regYear')], ['Folio', v('folio')], ['Código de verificación', v('code')], ['Emitido', date('issued')]])}
+      </div>
+      <div class="pg-col">
+        ${box('Padre', [['Nombre', v('father')], ['RUN', v('fatherRun')]])}
+        ${box('Madre', [['Nombre', v('mother')], ['RUN', v('motherRun')]])}
+      </div>
+    </div>
+    ${c.notes ? `<div class="pg-full"><div class="pg-box"><h2>Notas</h2><p>${v('notes')}</p></div></div>` : ''}
+    <p class="pg-foot">Impreso el ${esc(ctLong(ymd(new Date())))}. Resumen de datos; no reemplaza el certificado oficial.</p></div>`;
+  window.print();
+}
 function ctModal(c = null) {
   const x = c || { name: '', run: '', born: '', time: '', sex: '', place: '', regNo: '', regYear: '', father: '', fatherRun: '', mother: '', motherRun: '', folio: '', code: '', issued: '', notes: '' };
   const f = (name, label, attrs = '') => `<label class="fld"><span>${label}</span><input name="${name}" value="${esc(x[name])}" ${attrs}></label>`;
@@ -5570,6 +5600,17 @@ function ctModal(c = null) {
       save(); renderAll();
     },
     onDelete: c ? () => { S.certs = S.certs.filter(y => y !== c); save(); renderAll(); } : null,
+    onOpen: f => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn'; b.innerHTML = `${ic('printer')} Imprimir`;
+      b.onclick = () => {
+        const fd = new FormData(f), v = { ...x };
+        for (const k of Object.keys(x)) if (fd.has(k)) v[k] = String(fd.get(k)).trim();
+        if (v.born && !/^\d{4}-\d{2}-\d{2}$/.test(v.born)) v.born = '';
+        ctPrint(v);
+      };
+      $('.modal-f .grow', f).before(b);
+    },
   });
 }
 Object.assign(ACT, {
