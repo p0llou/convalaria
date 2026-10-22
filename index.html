@@ -985,6 +985,18 @@
     background: linear-gradient(135deg, transparent 52%, color-mix(in srgb, var(--ink) 30%, transparent) 52% 60%, transparent 60% 70%, color-mix(in srgb, var(--ink) 30%, transparent) 70% 78%, transparent 78%); }
   .ay-muted { color: color-mix(in srgb, var(--ink) 55%, transparent); }
 
+  /* Certificados */
+  .ct-drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 22px 16px; border: 2px dashed var(--line); border-radius: var(--r-sm); color: var(--muted); font-weight: 700; cursor: pointer; transition: border-color .15s, background .15s; }
+  .ct-drop > .ph-duotone { font-size: 36px; color: var(--accent-strong); }
+  .ct-drop strong { color: var(--ink); }
+  .ct-drop small { font-size: 12.5px; font-weight: 600; }
+  .ct-drop:hover, .ct-drop.over { border-color: var(--accent); background: var(--accent-softer); }
+  .ct-drop:focus-within { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .ct-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .ct-busy { margin: 10px 0 0; font-weight: 700; color: var(--accent-strong); }
+  .ct-ic { font-size: 22px; color: var(--accent-strong); }
+  .ct-warn { color: var(--danger); }
+
   @media (max-width: 980px) {
     .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
     .tiles { grid-template-columns: 1fr 1fr; }
@@ -1075,6 +1087,7 @@
     <button class="nav-btn" data-act="go" data-view="lugares"><span class="ic"><i class="ph-duotone ph-map-trifold" aria-hidden="true"></i></span><span>Lugares</span></button>
     <button class="nav-btn nav-fix" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
     <button class="nav-btn" data-act="go" data-view="ayudas"><span class="ic"><i class="ph-duotone ph-notepad" aria-hidden="true"></i></span><span>Ayudas de memoria</span></button>
+    <button class="nav-btn" data-act="go" data-view="certificados"><span class="ic"><i class="ph-duotone ph-identification-card" aria-hidden="true"></i></span><span>Certificados</span></button>
     <div class="nav-g">Tú</div>
     <button class="nav-btn" data-act="go" data-view="bitacora"><span class="ic"><i class="ph-duotone ph-popcorn" aria-hidden="true"></i></span><span>Bitácora</span></button>
     <button class="nav-btn" data-act="go" data-view="decorar"><span class="ic"><i class="ph-duotone ph-palette" aria-hidden="true"></i></span><span>Decorar</span></button>
@@ -1100,6 +1113,7 @@
     <section class="view" id="view-lugares" hidden></section>
     <section class="view" id="view-finanzas" hidden></section>
     <section class="view" id="view-ayudas" hidden></section>
+    <section class="view" id="view-certificados" hidden></section>
     <section class="view" id="view-bitacora" hidden></section>
     <section class="view" id="view-decorar" hidden></section>
   </main>
@@ -1207,6 +1221,7 @@ const defaults = () => ({
   todos: [], todoLists: [], todoList: 'todas',
   media: [], mediaLog: [],
   people: [], kin: [], meId: null, netPos: {}, ministries: fmMinDefault(),
+  certs: [],
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1224,7 +1239,7 @@ function normalize(raw) {
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   if (!s.netPos || typeof s.netPos !== 'object' || Array.isArray(s.netPos)) s.netPos = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog', 'people', 'kin'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog', 'people', 'kin', 'certs'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
   s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
@@ -3110,7 +3125,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora, familias: renderFamilias };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora, familias: renderFamilias, certificados: renderCertificados };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -5342,6 +5357,202 @@ Object.assign(INP, {
 });
 
 
+/* ---------- Certificados de nacimiento ---------- */
+// S.certs = [{ id, name, run, born, time, sex, place, regNo, regYear, father, fatherRun, mother, motherRun, folio, code, issued, notes, created }]
+// Los PDF del Registro Civil se leen en el navegador con pdf.js; solo se guardan los datos, nunca el archivo.
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let ctQuery = '', ctBusy = null, pdfjsP = null;
+function loadPdfjs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  if (pdfjsP) return pdfjsP;
+  pdfjsP = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = PDFJS + 'pdf.min.js';
+    s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(); };
+    s.onerror = () => { pdfjsP = null; s.remove(); rej(new Error('pdfjs')); };
+    document.head.appendChild(s);
+  });
+  return pdfjsP;
+}
+// Texto del PDF por renglones: agrupa los trozos por altura y los ordena de izquierda a derecha
+async function pdfText(file) {
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, lines = [];
+  try {
+    for (let n = 1; n <= doc.numPages; n++) {
+      const rows = [];
+      for (const it of (await (await doc.getPage(n)).getTextContent()).items) {
+        if (!it.str?.trim()) continue;
+        const x = it.transform[4], y = it.transform[5];
+        let r = rows.find(r => Math.abs(r.y - y) < 3);
+        if (!r) rows.push(r = { y, its: [] });
+        r.its.push({ x, w: it.width, s: it.str });
+      }
+      rows.sort((a, b) => b.y - a.y).forEach(r => {
+        r.its.sort((a, b) => a.x - b.x);
+        lines.push(r.its.reduce((t, it, i) => { const p = r.its[i - 1]; return t + (p && it.x - (p.x + p.w) > 1 ? ' ' : '') + it.s; }, '').replace(/\s+/g, ' ').trim());
+      });
+    }
+  } finally { doc.destroy(); }
+  return lines.join('\n');
+}
+const ctRunClean = s => String(s || '').replace(/[^\dkK]/g, '').toUpperCase();
+function ctRunFmt(s) {
+  const c = ctRunClean(s);
+  return c.length < 2 ? String(s || '').trim() : c.slice(0, -1).replace(/\B(?=(\d{3})+$)/g, '.') + '-' + c.slice(-1);
+}
+function ctRunOk(s) {   // dígito verificador (módulo 11)
+  const c = ctRunClean(s);
+  if (!/^\d{6,9}[\dK]$/.test(c)) return false;
+  let sum = 0, f = 2;
+  for (let i = c.length - 2; i >= 0; i--) { sum += Number(c[i]) * f; f = f === 7 ? 2 : f + 1; }
+  const v = 11 - sum % 11;
+  return c.slice(-1) === (v === 11 ? '0' : v === 10 ? 'K' : String(v));
+}
+const ctDate = (d, mo, y) => { const i = MESES.indexOf(sNorm(mo).replace('setiembre', 'septiembre')); return i < 0 ? '' : `${y}-${pad(i + 1)}-${pad(d)}`; };
+const ctLong = k => { const d = fromYmd(k); return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`; };
+function ctAge(k) {
+  const b = fromYmd(k), t = new Date();
+  return t.getFullYear() - b.getFullYear() - (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate()) ? 1 : 0);
+}
+const ctNeedsCheck = c => !c.name || !c.run || !ctRunOk(c.run) || (c.fatherRun && !ctRunOk(c.fatherRun)) || (c.motherRun && !ctRunOk(c.motherRun));
+// Etiquetas del certificado del Registro Civil; el valor va en el mismo renglón después de ":"
+function ctParse(t) {
+  if (!/certificado de nacimiento/i.test(t)) return null;
+  const RUN = ' *(\\d{1,2}\\.?\\d{3}\\.?\\d{3} *- *[\\dkK])';
+  const get = (label, val = ' *([^\\n]*)') => (t.match(new RegExp(label + ' *:' + val, 'i'))?.[1] || '').trim();
+  const born = t.match(/Fecha (?:de )?nacimiento *: *(\d{1,2}) +(?:de +)?([a-záéíóú]+) +(?:de +)?(\d{4})/i);
+  const issued = t.match(/Fecha emisi[oó]n *: *(\d{1,2}) +(?:de +)?([a-záéíóú]+) +(?:de +)?(\d{4})/i);
+  const time = get('Hora (?:de )?nacimiento', ' *(\\d{1,2}:\\d{2})');
+  const sex = get('Sexo', ' *(femenino|masculino)');
+  const c = {
+    name: get('Nombre inscrito'), run: ctRunFmt(get('R\\.? ?U\\.? ?N\\.?', RUN)),
+    born: born ? ctDate(...born.slice(1)) : '', time: time ? time.padStart(5, '0') : '', sex: sex ? cap(sex.toLowerCase()) : '',
+    place: get('Circunscripci[oó]n'), regNo: get('Nro\\.? (?:de )?inscripci[oó]n', ' *([\\d.]+)'), regYear: get('A[nñ]o', ' *(\\d{4})'),
+    father: get('Nombre del padre'), fatherRun: ctRunFmt(get('R\\.? ?U\\.? ?N\\.? del padre', RUN)),
+    mother: get('Nombre de la madre'), motherRun: ctRunFmt(get('R\\.? ?U\\.? ?N\\.? de la madre', RUN)),
+    folio: get('Folio', ' *(\\d+)'), code: get('C[oó]digo (?:de )?verificaci[oó]n', '\\s*([0-9a-f]+)'), issued: issued ? ctDate(...issued.slice(1)) : '',
+  };
+  return c.name || c.run ? c : null;
+}
+// Mismo certificado = mismo RUN; sin RUN, mismo folio o mismo nombre y fecha
+function ctFind(c, skip = null) {
+  const r = ctRunClean(c.run);
+  return S.certs.find(x => x !== skip && (r ? ctRunClean(x.run) === r : (c.folio && x.folio === c.folio) || (c.name && x.name === c.name && x.born === c.born)));
+}
+async function ctImport(files) {
+  files = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!files.length) { toast({ title: 'Elige archivos PDF', icon: 'file-pdf' }); return; }
+  if (ctBusy) return;
+  try { await loadPdfjs(); }
+  catch { toast({ title: 'No pude cargar el lector de PDF', text: 'Revisa tu conexión e intenta de nuevo.', icon: 'wifi-slash' }); return; }
+  let added = 0, updated = 0;
+  const bad = [];
+  ctBusy = { done: 0, total: files.length }; ctProgress();
+  for (const f of files) {
+    try {
+      const t = await pdfText(f), c = t.trim().length > 20 ? ctParse(t) : null;
+      if (!c) bad.push([f.name, t.trim().length > 20 ? 'No parece un certificado de nacimiento' : 'No tiene texto (¿es una foto o un escaneo?)']);
+      else {
+        const old = ctFind(c);
+        if (old) { Object.entries(c).forEach(([k, v]) => { if (v) old[k] = v; }); updated++; }
+        else { S.certs.push({ id: uid(), ...c, notes: '', created: Date.now() }); added++; }
+      }
+    } catch { bad.push([f.name, 'No se pudo abrir']); }
+    ctBusy.done++; ctProgress();
+  }
+  ctBusy = null;
+  save(); renderAll();
+  const parts = [added && `${added} ${added === 1 ? 'nuevo' : 'nuevos'}`, updated && `${updated} ${updated === 1 ? 'actualizado' : 'actualizados'}`, bad.length && `${bad.length} sin leer`].filter(Boolean);
+  toast({ title: added || updated ? 'Certificados guardados' : 'No se guardó nada', text: parts.join(' · '), icon: added || updated ? 'identification-card' : 'warning' });
+  if (bad.length) openModal('PDF sin leer', `<ul class="list plain">${bad.map(([n, why]) => `<li><strong>${esc(n)}</strong><div class="lesson-meta">${why}</div></li>`).join('')}</ul>
+    <p class="hint" style="margin-top:12px">Puedes agregarlos a mano con el botón "Agregar a mano".</p>`, { noSave: true });
+}
+function ctProgress() {
+  const el = $('[data-ct-busy]');
+  if (!el) return;
+  el.hidden = !ctBusy;
+  if (ctBusy) el.textContent = `Leyendo ${Math.min(ctBusy.done + 1, ctBusy.total)} de ${ctBusy.total}…`;
+}
+function ctListHtml() {
+  const words = sNorm(ctQuery).split(/\s+/).filter(Boolean).map(w => /\d/.test(w) && /^[\d.kK-]+$/.test(w) ? ctRunClean(w).toLowerCase() : w);
+  const hay = c => sNorm([c.name, c.run, ctRunClean(c.run), c.father, c.fatherRun, ctRunClean(c.fatherRun), c.mother, c.motherRun, ctRunClean(c.motherRun), c.place, c.notes].join(' '));
+  const list = S.certs.filter(c => words.every(w => hay(c).includes(w))).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
+  if (!list.length) return empty(S.certs.length ? 'Nadie coincide con la búsqueda' : 'Sube los PDF de los certificados para guardar sus datos', 'identification-card');
+  return `<ul class="list">${list.map(c => {
+    const d = c.born && fromYmd(c.born);
+    const meta = [c.run && 'RUN ' + esc(c.run), c.born && esc(ctLong(c.born)) + (c.time ? ' · ' + esc(c.time) : ''), c.place && esc(c.place)].filter(Boolean).join(' · ');
+    const parents = [c.father, c.mother].filter(Boolean).map(esc).join(' y ');
+    return `<li data-id="${c.id}"><button class="bd" data-act="ctEdit" data-id="${c.id}">
+      ${d ? `<span class="bd-day"><strong>${d.getDate()}</strong><small>${MESES[d.getMonth()].slice(0, 3)}</small></span>` : `<span class="bd-day ct-ic">${ic('identification-card', 'duotone')}</span>`}
+      <span class="bd-b"><strong>${esc(c.name || 'Sin nombre')}</strong>${meta ? `<span class="lesson-meta">${meta}</span>` : ''}${parents ? `<span class="lesson-meta">Hijo/a de ${parents}</span>` : ''}</span>
+      ${ctNeedsCheck(c) ? `<span class="bd-when ct-warn">${ic('warning')} Revisar</span>` : c.born ? `<span class="bd-when">${ctAge(c.born)} años</span>` : ''}</button></li>`;
+  }).join('')}</ul>`;
+}
+function renderCertificados(root) {
+  const n = S.certs.length, check = S.certs.filter(ctNeedsCheck).length;
+  root.innerHTML = `
+    <div class="page-h"><div><h1>Certificados</h1><p class="sub">${n ? `${n} ${n === 1 ? 'certificado' : 'certificados'}${check ? ` · ${check} por revisar` : ''}` : 'Datos de certificados de nacimiento'}</p></div>
+      <button class="btn" data-act="ctNew">${ic('plus')} Agregar a mano</button></div>
+    <section class="card">
+      <label class="ct-drop">${ic('file-pdf', 'duotone')}<strong>Sube o arrastra los PDF aquí</strong><small>Puedes elegir muchos a la vez. Solo se guardan los datos; el PDF no se sube a ningún lado.</small>
+        <input type="file" accept="application/pdf,.pdf" multiple data-chg="ctFiles"></label>
+      <p class="ct-busy" data-ct-busy hidden></p>
+    </section>
+    <section class="card">
+      <div class="ay-bar"><input type="search" class="inp ay-q" data-inp="ctQuery" value="${esc(ctQuery)}" placeholder="Buscar por nombre o RUN…" aria-label="Buscar por nombre o RUN"></div>
+      ${ctListHtml()}
+    </section>`;
+  ctProgress();
+  const dz = $('.ct-drop', root);
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+  dz.ondragleave = () => dz.classList.remove('over');
+  dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); ctImport(e.dataTransfer.files); };
+}
+function ctModal(c = null) {
+  const x = c || { name: '', run: '', born: '', time: '', sex: '', place: '', regNo: '', regYear: '', father: '', fatherRun: '', mother: '', motherRun: '', folio: '', code: '', issued: '', notes: '' };
+  const f = (name, label, attrs = '') => `<label class="fld"><span>${label}</span><input name="${name}" value="${esc(x[name])}" ${attrs}></label>`;
+  openModal(c ? 'Certificado' : 'Nuevo certificado', `
+    ${f('name', 'Nombre completo', 'required maxlength="120"')}
+    <div class="row2">${f('run', 'RUN', 'maxlength="14" placeholder="12.345.678-9"')}
+      <label class="fld"><span>Sexo</span><select name="sex">${['', 'Femenino', 'Masculino'].map(s => `<option value="${s}" ${x.sex === s ? 'selected' : ''}>${s || '—'}</option>`).join('')}</select></label></div>
+    <div class="row2">${f('born', 'Fecha de nacimiento', 'type="date"')}${f('time', 'Hora de nacimiento', 'type="time"')}</div>
+    ${f('place', 'Circunscripción', 'maxlength="80"')}
+    <div class="row2">${f('father', 'Nombre del padre', 'maxlength="120"')}${f('fatherRun', 'RUN del padre', 'maxlength="14"')}</div>
+    <div class="row2">${f('mother', 'Nombre de la madre', 'maxlength="120"')}${f('motherRun', 'RUN de la madre', 'maxlength="14"')}</div>
+    <div class="row2">${f('regNo', 'Nro. inscripción', 'maxlength="20"')}${f('regYear', 'Año inscripción', 'maxlength="4" inputmode="numeric"')}</div>
+    <div class="row2">${f('folio', 'Folio', 'maxlength="20"')}${f('code', 'Código de verificación', 'maxlength="30"')}</div>
+    ${x.issued ? `<p class="hint">Certificado emitido el ${esc(ctLong(x.issued))}.</p>` : ''}
+    <label class="fld"><span>Notas</span><textarea name="notes" rows="2">${esc(x.notes)}</textarea></label>`, {
+    onSave: fd => {
+      const v = Object.fromEntries(['name', 'run', 'born', 'time', 'sex', 'place', 'regNo', 'regYear', 'father', 'fatherRun', 'mother', 'motherRun', 'folio', 'code', 'notes'].map(k => [k, String(fd.get(k) || '').trim()]));
+      for (const [k, l] of [['run', 'El RUN'], ['fatherRun', 'El RUN del padre'], ['motherRun', 'El RUN de la madre']]) {
+        if (v[k] && !ctRunOk(v[k])) return `${l} no es válido (revisa el dígito verificador).`;
+        v[k] = v[k] && ctRunFmt(v[k]);
+      }
+      const dup = v.run && ctFind(v, c);
+      if (dup) return `Ya hay un certificado con ese RUN: ${dup.name}.`;
+      if (c) Object.assign(c, v); else S.certs.push({ id: uid(), ...v, issued: '', created: Date.now() });
+      save(); renderAll();
+    },
+    onDelete: c ? () => { S.certs = S.certs.filter(y => y !== c); save(); renderAll(); } : null,
+  });
+}
+Object.assign(ACT, {
+  ctNew: () => ctModal(),
+  ctEdit: el => { const c = findById(S.certs, el.dataset.id); c && ctModal(c); },
+});
+Object.assign(CHG, {
+  ctFiles: el => ctImport(el.files),
+});
+Object.assign(INP, {
+  ctQuery: el => {
+    ctQuery = el.value;
+    const root = $('#view-certificados'), pos = el.selectionStart;
+    renderAll();
+    const i = $('[data-inp="ctQuery"]', root); if (i) { i.focus(); i.setSelectionRange(pos, pos); }
+  },
+});
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -6071,6 +6282,8 @@ const searchSources = () => [
       fields: [m.title, m.by, ...S.mediaLog.filter(l => l.media === m.id).map(l => l.review)], open: () => { go('bitacora'); bxModal(m); } })) },
   { label: 'Familias', icon: 'tree', items: () => S.people.map(p => ({ title: fmFull(p), sub: [p.last1 ? 'Familia ' + p.last1 : '', FM_CHURCH[p.church]?.[0], fmMinText(p)].filter(Boolean).join(' · '),
       fields: [fmFull(p), fmMinText(p), p.notes], open: () => { fmFocus = p.id; fmTab = 'arbol'; go('familias'); fmPersonModal(p); } })) },
+  { label: 'Certificados', icon: 'identification-card', items: () => S.certs.map(c => ({ title: c.name || 'Sin nombre', sub: [c.run && 'RUN ' + c.run, c.born && ctLong(c.born)].filter(Boolean).join(' · '),
+      fields: [c.name, c.run, ctRunClean(c.run), c.father, c.fatherRun, c.mother, c.motherRun, c.place, c.notes], open: () => { go('certificados'); ctModal(c); } })) },
   { label: 'Horario', icon: 'clock', items: () => S.blocks.map(b => ({ title: b.title, sub: `${b.days.map(i => DIAS_C[i]).join(', ')} · ${b.start}–${b.end}`, fields: [b.title, b.place],
       open: () => { go('horario'); blockModal(b); } })) },
   { label: 'Clases', icon: 'book-open-text', items: () => S.lessons.map(l => ({ title: l.title || 'Clase sin título', sub: [l.date ? shortDate(l.date) : 'Sin fecha', l.reading].filter(Boolean).join(' · '),
