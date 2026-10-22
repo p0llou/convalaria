@@ -5502,10 +5502,14 @@ function ctSorter() {
     return ctDir * x.localeCompare(y, 'es') || byName(a, b);
   };
 }
-function ctListHtml() {
+// Lista visible: respeta la búsqueda y el orden elegidos
+function ctList() {
   const words = sNorm(ctQuery).split(/\s+/).filter(Boolean).map(w => /\d/.test(w) && /^[\d.kK-]+$/.test(w) ? ctRunClean(w).toLowerCase() : w);
   const hay = c => sNorm([c.name, c.run, ctRunClean(c.run), c.father, c.fatherRun, ctRunClean(c.fatherRun), c.mother, c.motherRun, ctRunClean(c.motherRun), c.place, c.notes].join(' '));
-  const list = S.certs.filter(c => words.every(w => hay(c).includes(w))).sort(ctSorter());
+  return S.certs.filter(c => words.every(w => hay(c).includes(w))).sort(ctSorter());
+}
+function ctListHtml() {
+  const list = ctList();
   if (!list.length) return empty(S.certs.length ? 'Nadie coincide con la búsqueda' : 'Sube los PDF de los certificados para guardar sus datos', 'identification-card');
   return `<ul class="list">${list.map(c => {
     const d = c.born && fromYmd(c.born);
@@ -5521,7 +5525,7 @@ function renderCertificados(root) {
   const n = S.certs.length, check = S.certs.filter(ctNeedsCheck).length;
   root.innerHTML = `
     <div class="page-h"><div><h1>Certificados</h1><p class="sub">${n ? `${n} ${n === 1 ? 'certificado' : 'certificados'}${check ? ` · ${check} por revisar` : ''}` : 'Datos de certificados de nacimiento'}</p></div>
-      <button class="btn" data-act="ctNew">${ic('plus')} Agregar a mano</button></div>
+      <div class="btns">${n ? `<button class="btn" data-act="ctCsv">${ic('download-simple')} Descargar CSV</button>` : ''}<button class="btn" data-act="ctNew">${ic('plus')} Agregar a mano</button></div></div>
     <section class="card">
       <label class="ct-drop">${ic('file-pdf', 'duotone')}<strong>Sube o arrastra los PDF aquí</strong><small>Puedes elegir muchos a la vez. Solo se guardan los datos; el PDF no se sube a ningún lado.</small>
         <input type="file" accept="application/pdf,.pdf" multiple data-chg="ctFiles"></label>
@@ -5572,6 +5576,18 @@ Object.assign(ACT, {
   ctNew: () => ctModal(),
   ctEdit: el => { const c = findById(S.certs, el.dataset.id); c && ctModal(c); },
   ctDir: () => { ctDir = -ctDir; renderAll(); },
+  ctCsv: () => {
+    const list = ctList();
+    if (!list.length) return toast({ title: 'Nada que descargar', text: 'Nadie coincide con la búsqueda', icon: 'warning' });
+    const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`, dmy = k => k ? k.split('-').reverse().join('-') : '';
+    const lines = [['Nombre', 'RUN', 'Sexo', 'Fecha de nacimiento', 'Hora', 'Edad', 'Circunscripción', 'Nro. inscripción', 'Año inscripción', 'Padre', 'RUN del padre', 'Madre', 'RUN de la madre', 'Folio', 'Código de verificación', 'Emitido', 'Notas'].map(q).join(';'),
+      ...list.map(c => [c.name, c.run, c.sex, dmy(c.born), c.time, c.born ? ctAge(c.born) : '', c.place, c.regNo, c.regYear, c.father, c.fatherRun, c.mother, c.motherRun, c.folio, c.code, dmy(c.issued), c.notes].map(q).join(';'))];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    a.download = `certificados-${ymd(new Date())}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  },
 });
 Object.assign(CHG, {
   ctFiles: el => ctImport(el.files),
