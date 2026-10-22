@@ -5361,7 +5361,7 @@ Object.assign(INP, {
 // S.certs = [{ id, name, run, born, time, sex, place, regNo, regYear, father, fatherRun, mother, motherRun, folio, code, issued, notes, created }]
 // Los PDF del Registro Civil se leen en el navegador con pdf.js; solo se guardan los datos, nunca el archivo.
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-let ctQuery = '', ctBusy = null, pdfjsP = null;
+let ctQuery = '', ctBusy = null, pdfjsP = null, ctSort = 'nombre', ctDir = 1;
 function loadPdfjs() {
   if (window.pdfjsLib) return Promise.resolve();
   if (pdfjsP) return pdfjsP;
@@ -5473,10 +5473,39 @@ function ctProgress() {
   el.hidden = !ctBusy;
   if (ctBusy) el.textContent = `Leyendo ${Math.min(ctBusy.done + 1, ctBusy.total)} de ${ctBusy.total}…`;
 }
+// Apellidos = las dos últimas palabras del nombre, cada una con sus partículas (de, del, la…): «María de la Fuente Soto» → «de la Fuente Soto»
+const CT_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'van', 'von', 'san']);
+function ctSurnameKey(name) {
+  const w = (name || '').trim().split(/\s+/).filter(Boolean), groups = [];
+  let i = w.length;
+  while (i > 0 && groups.length < 2) {
+    let j = i - 1;
+    while (j > 0 && CT_PARTICLES.has(sNorm(w[j - 1])) && j - 1 > 0) j--;
+    groups.unshift(w.slice(j, i).filter(x => !CT_PARTICLES.has(sNorm(x))).join(' '));
+    i = j;
+  }
+  if (w.length < 3) return sNorm(w.slice(-1).join(' ') + ' ' + w.slice(0, -1).join(' '));
+  return sNorm(groups.join(' ') + ' ' + w.slice(0, i).join(' '));
+}
+const CT_SORTS = {
+  nombre: { label: 'Nombre', dirs: ['A → Z', 'Z → A'], key: c => c.name ? sNorm(c.name) : null },
+  apellido: { label: 'Apellido', dirs: ['A → Z', 'Z → A'], key: c => c.name ? ctSurnameKey(c.name) : null },
+  edad: { label: 'Edad', dirs: ['Menor a mayor', 'Mayor a menor'], key: c => c.born ? c.born.split('').map(ch => /\d/.test(ch) ? 9 - ch : ch).join('') : null },
+  cumple: { label: 'Cumpleaños (día y mes)', dirs: ['Enero → diciembre', 'Diciembre → enero'], key: c => c.born ? c.born.slice(5) : null },
+};
+// Los que no tienen el dato quedan al final, en cualquier sentido
+function ctSorter() {
+  const key = (CT_SORTS[ctSort] || CT_SORTS.nombre).key, byName = (a, b) => (a.name || '').localeCompare(b.name || '', 'es');
+  return (a, b) => {
+    const x = key(a), y = key(b);
+    if (x == null || y == null) return (x == null) - (y == null) || byName(a, b);
+    return ctDir * x.localeCompare(y, 'es') || byName(a, b);
+  };
+}
 function ctListHtml() {
   const words = sNorm(ctQuery).split(/\s+/).filter(Boolean).map(w => /\d/.test(w) && /^[\d.kK-]+$/.test(w) ? ctRunClean(w).toLowerCase() : w);
   const hay = c => sNorm([c.name, c.run, ctRunClean(c.run), c.father, c.fatherRun, ctRunClean(c.fatherRun), c.mother, c.motherRun, ctRunClean(c.motherRun), c.place, c.notes].join(' '));
-  const list = S.certs.filter(c => words.every(w => hay(c).includes(w))).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
+  const list = S.certs.filter(c => words.every(w => hay(c).includes(w))).sort(ctSorter());
   if (!list.length) return empty(S.certs.length ? 'Nadie coincide con la búsqueda' : 'Sube los PDF de los certificados para guardar sus datos', 'identification-card');
   return `<ul class="list">${list.map(c => {
     const d = c.born && fromYmd(c.born);
@@ -5499,7 +5528,9 @@ function renderCertificados(root) {
       <p class="ct-busy" data-ct-busy hidden></p>
     </section>
     <section class="card">
-      <div class="ay-bar"><input type="search" class="inp ay-q" data-inp="ctQuery" value="${esc(ctQuery)}" placeholder="Buscar por nombre o RUN…" aria-label="Buscar por nombre o RUN"></div>
+      <div class="ay-bar"><input type="search" class="inp ay-q" data-inp="ctQuery" value="${esc(ctQuery)}" placeholder="Buscar por nombre o RUN…" aria-label="Buscar por nombre o RUN">
+        <label class="toggle">Ordenar <select class="inp" style="width:auto;padding:6px 10px" data-chg="ctSort">${Object.entries(CT_SORTS).map(([k, o]) => `<option value="${k}" ${ctSort === k ? 'selected' : ''}>${o.label}</option>`).join('')}</select></label>
+        <button class="btn btn-sm" data-act="ctDir" title="Cambiar sentido">${ic(ctDir > 0 ? 'sort-ascending' : 'sort-descending')} ${(CT_SORTS[ctSort] || CT_SORTS.nombre).dirs[ctDir > 0 ? 0 : 1]}</button></div>
       ${ctListHtml()}
     </section>`;
   ctProgress();
@@ -5540,9 +5571,11 @@ function ctModal(c = null) {
 Object.assign(ACT, {
   ctNew: () => ctModal(),
   ctEdit: el => { const c = findById(S.certs, el.dataset.id); c && ctModal(c); },
+  ctDir: () => { ctDir = -ctDir; renderAll(); },
 });
 Object.assign(CHG, {
   ctFiles: el => ctImport(el.files),
+  ctSort: el => { ctSort = el.value; renderAll(); },
 });
 Object.assign(INP, {
   ctQuery: el => {
