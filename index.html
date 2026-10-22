@@ -5583,8 +5583,8 @@ async function ctPrint(c) {
         ${box('stamp', 'Inscripción', [['Nro. inscripción', v('regNo')], ['Año inscripción', v('regYear')], ['Folio', v('folio')], ['Código de verificación', v('code')], ['Emitido', date('issued')]])}
       </div>
       <div class="pg-col">
-        ${box('heart', 'Mamá', [['Nombre', v('mother')], ['RUN', v('motherRun')]])}
-        ${box('heart', 'Papá', [['Nombre', v('father')], ['RUN', v('fatherRun')]])}
+        ${box('heart', 'Padre', [['Nombre', v('father')], ['RUN', v('fatherRun')]])}
+        ${box('heart', 'Madre', [['Nombre', v('mother')], ['RUN', v('motherRun')]])}
       </div>
     </div>
     ${c.notes ? `<div class="pg-full"><div class="pg-box"><h2>${ic('note-pencil', 'duotone')}Notas</h2><p>${v('notes')}</p></div></div>` : ''}
