@@ -1019,6 +1019,13 @@
   .ct-busy { margin: 10px 0 0; font-weight: 700; color: var(--accent-strong); }
   .ct-ic { font-size: 22px; color: var(--accent-strong); }
   .ct-warn { color: var(--danger); }
+  .ct-fm { border: 1.5px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; transition: opacity .15s; }
+  .ct-fm.off { opacity: .5; }
+  .ct-fm.miss { border-color: var(--danger); }
+  .ct-fm-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .ct-fm .lesson-meta { margin: 0; }
+  .ct-fm .badge.ask { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
+  .ct-fm .badge.new { background: var(--accent-strong); color: var(--on-accent); }
 
   @media (max-width: 980px) {
     .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
@@ -5498,17 +5505,19 @@ function ctProgress() {
 }
 // Apellidos = las dos últimas palabras del nombre, cada una con sus partículas (de, del, la…): «María de la Fuente Soto» → «de la Fuente Soto»
 const CT_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'van', 'von', 'san']);
-function ctSurnameKey(name) {
-  const w = (name || '').trim().split(/\s+/).filter(Boolean), groups = [];
+function ctSplitName(full) {
+  const w = (full || '').trim().split(/\s+/).filter(Boolean), last = [], max = w.length > 2 ? 2 : 1;
   let i = w.length;
-  while (i > 0 && groups.length < 2) {
+  while (i > 1 && last.length < max) {
     let j = i - 1;
-    while (j > 0 && CT_PARTICLES.has(sNorm(w[j - 1])) && j - 1 > 0) j--;
-    groups.unshift(w.slice(j, i).filter(x => !CT_PARTICLES.has(sNorm(x))).join(' '));
-    i = j;
+    while (j > 1 && CT_PARTICLES.has(sNorm(w[j - 1]))) j--;
+    last.unshift(w.slice(j, i)); i = j;
   }
-  if (w.length < 3) return sNorm(w.slice(-1).join(' ') + ' ' + w.slice(0, -1).join(' '));
-  return sNorm(groups.join(' ') + ' ' + w.slice(0, i).join(' '));
+  return { given: w.slice(0, i), last };
+}
+function ctSurnameKey(name) {
+  const { given, last } = ctSplitName(name), noP = ws => ws.filter(x => !CT_PARTICLES.has(sNorm(x))).join(' ');
+  return sNorm([...last.map(noP), given.join(' ')].join(' '));
 }
 const CT_SORTS = {
   nombre: { label: 'Nombre', dirs: ['A → Z', 'Z → A'], key: c => c.name ? sNorm(c.name) : null },
@@ -5548,7 +5557,7 @@ function renderCertificados(root) {
   const n = S.certs.length, check = S.certs.filter(ctNeedsCheck).length;
   root.innerHTML = `
     <div class="page-h"><div><h1>Certificados</h1><p class="sub">${n ? `${n} ${n === 1 ? 'certificado' : 'certificados'}${check ? ` · ${check} por revisar` : ''}` : 'Datos de certificados de nacimiento'}</p></div>
-      <div class="btns">${n ? `<button class="btn" data-act="ctCsv">${ic('download-simple')} Descargar CSV</button>` : ''}<button class="btn" data-act="ctNew">${ic('plus')} Agregar a mano</button></div></div>
+      <div class="btns">${n ? `<button class="btn" data-act="ctFm">${ic('tree')} Pasar a Familias</button><button class="btn" data-act="ctCsv">${ic('download-simple')} Descargar CSV</button>` : ''}<button class="btn" data-act="ctNew">${ic('plus')} Agregar a mano</button></div></div>
     <section class="card">
       <label class="ct-drop">${ic('file-pdf', 'duotone')}<strong>Sube o arrastra los PDF aquí</strong><small>Puedes elegir muchos a la vez. Solo se guardan los datos; el PDF no se sube a ningún lado.</small>
         <input type="file" accept="application/pdf,.pdf" multiple data-chg="ctFiles"></label>
@@ -5591,6 +5600,141 @@ async function ctPrint(c) {
     <p class="pg-foot">${ic('flower-tulip', 'duotone')} Impreso el ${esc(ctLong(ymd(new Date())))} · Resumen de datos; no reemplaza el certificado oficial ${ic('flower-tulip', 'duotone')}</p></div>`;
   await Promise.all($$('#printArea img').map(i => i.decode().catch(() => {})));
   window.print();
+}
+/* Pasar a Familias: persona, padre y madre de cada certificado, con revisión antes de guardar */
+// c.fm = { p, f, m }: ids de Familias a los que quedó unido (no se muestra; evita duplicar al volver a pasar)
+const CT_DOUBLE = new Set(['maria jose', 'maria jesus', 'maria paz', 'maria ignacia', 'maria fernanda', 'maria teresa', 'maria elena', 'maria isabel', 'maria luisa', 'maria angelica',
+  'maria cristina', 'maria francisca', 'maria alejandra', 'maria eugenia', 'maria soledad', 'maria veronica', 'maria pia', 'maria trinidad', 'maria belen', 'maria ines', 'maria cecilia',
+  'maria antonieta', 'maria magdalena', 'maria victoria', 'maria gracia', 'maria consuelo', 'maria olga', 'ana maria', 'ana luisa', 'rosa maria', 'luz maria', 'juan pablo', 'juan carlos',
+  'juan jose', 'juan francisco', 'juan manuel', 'juan ignacio', 'juan antonio', 'juan andres', 'juan luis', 'juan pedro', 'juan cristobal', 'juan esteban', 'juan alberto', 'juan enrique',
+  'juan eduardo', 'juan ramon', 'juan diego', 'juan martin', 'jose miguel', 'jose luis', 'jose manuel', 'jose antonio', 'jose tomas', 'jose ignacio', 'jose pablo', 'jose francisco',
+  'jose maria', 'jose joaquin', 'jose carlos', 'luis alberto', 'luis felipe', 'luis miguel', 'miguel angel', 'carlos alberto', 'jorge luis', 'pedro pablo', 'francisco javier']);
+const ctCapWord = w => w.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+// Mayúscula inicial; partículas en minúscula salvo al comienzo de un apellido («De la Fuente», «María de los Ángeles»)
+const ctCase = ws => ws.map((x, i) => i && CT_PARTICLES.has(sNorm(x)) ? x.toLowerCase() : ctCapWord(x)).join(' ');
+// Nombre para Familias: primer nombre (o doble común, o «María de los Ángeles») y ambos apellidos
+function ctFmName(full) {
+  const { given, last } = ctSplitName(full), units = [];
+  ctCase(given).split(' ').filter(Boolean).forEach(x => { const u = units.at(-1); if (u && CT_PARTICLES.has(sNorm(u.at(-1)))) u.push(x); else units.push([x]); });
+  const u = units.map(x => x.join(' ')), two = u.length > 1 && (CT_DOUBLE.has(sNorm(u[0] + ' ' + u[1])) || CT_PARTICLES.has(sNorm(units[1][0])));
+  return { name: two ? `${u[0]} ${u[1]}` : u[0] || '', last1: last[0] ? ctCase(last[0]) : '', last2: last[1] ? ctCase(last[1]) : '',
+    opts: [...new Set([...u, u.slice(0, 2).join(' '), u.join(' ')].filter(Boolean))] };
+}
+function ctFmPlan() {
+  const ents = [], keys = new Map(), certs = [], runOf = new Map();
+  S.certs.forEach(c => ['p', 'f', 'm'].forEach(r => { const id = c.fm?.[r], run = ctRunClean(c[{ p: 'run', f: 'fatherRun', m: 'motherRun' }[r]]); if (id && run) runOf.set(id, run); }));
+  // Misma persona = mismo RUN; sin RUN, mismo nombre completo (salvo que los RUN no coincidan)
+  const ent = (run, full, sex, c, role) => {
+    full = (full || '').trim(); const r = ctRunClean(run), rk = r && 'r' + r, nk = full && 'n' + sNorm(full).replace(/\s+/g, ' ');
+    if (!rk && !nk) return null;
+    let e = (rk && keys.get(rk)) || (nk && keys.get(nk));
+    if (e && r && e.run && e.run !== r) e = null;
+    if (!e) ents.push(e = { i: ents.length, run: r, full, sex, refs: [] });
+    if (rk && !keys.has(rk)) keys.set(rk, e);
+    if (nk && !keys.has(nk)) keys.set(nk, e);
+    e.run ||= r; e.full ||= full; e.sex ||= sex; e.refs.push([c, role]);
+    return e;
+  };
+  S.certs.forEach(c => {
+    const p = ent(c.run, c.name, { Femenino: 'f', Masculino: 'm' }[c.sex] || '', c, 'p');
+    if (p) certs.push({ c, p, f: ent(c.fatherRun, c.father, 'm', c, 'f'), m: ent(c.motherRun, c.mother, 'f', c, 'm') });
+  });
+  const N = t => sNorm(t).trim().replace(/\s+/g, ' '), same = (a, b) => N(a) === N(b);
+  ents.forEach(e => {
+    e.nm = ctFmName(e.full);
+    const linked = e.refs.map(([c, r]) => fmP(c.fm?.[r])).find(Boolean) || (e.run && S.people.find(p => runOf.get(p.id) === e.run));
+    if (linked) { e.status = 'ok'; e.cands = [linked]; return; }
+    const free = p => !runOf.has(p.id) || !e.run || runOf.get(p.id) === e.run, given = new Set(N(ctSplitName(e.full).given.join(' ')).split(' '));
+    const exact = S.people.filter(p => free(p) && same(p.name, e.nm.name) && same(p.last1, e.nm.last1) && same(p.last2, e.nm.last2));
+    const near = S.people.filter(p => free(p) && !exact.includes(p) && e.nm.last1 && same(p.last1, e.nm.last1) && (same(p.last2, e.nm.last2) || !p.last2 || !e.nm.last2) && given.has(N(p.name).split(' ')[0]));
+    e.cands = [...exact, ...near];
+    e.status = exact.length === 1 && !near.length ? 'same' : e.cands.length ? 'ask' : 'new';
+  });
+  return { ents, certs };
+}
+function ctFmModal() {
+  const { ents, certs } = ctFmPlan();
+  if (!ents.length) return toast({ title: 'Nada que pasar', text: 'Los certificados no tienen nombres', icon: 'warning' });
+  const disp = e => [e.nm.name, e.nm.last1].filter(Boolean).join(' ') || 'Sin nombre';
+  const rel = e => {
+    const out = [], kids = { f: [], m: [] };
+    certs.forEach(x => {
+      if (x.p === e) { const ps = [x.f, x.m].filter(Boolean).map(disp); out.push(ps.length ? `${fmG(e.sex, 'Hijo', 'Hija')} de ${ps.join(' y ')}` : 'Certificado propio'); }
+      if (x.f === e) kids.f.push(disp(x.p));
+      if (x.m === e) kids.m.push(disp(x.p));
+    });
+    if (kids.f.length) out.push(`Padre de ${kids.f.join(', ')}`);
+    if (kids.m.length) out.push(`Madre de ${kids.m.join(', ')}`);
+    return [...new Set(out)].join(' · ');
+  };
+  const BADGE = { ask: ['ask', '¿Ya está en Familias?'], new: ['new', 'Nueva'], same: ['', 'Ya existe'], ok: ['', 'Ya unida'] };
+  const row = e => {
+    const def = e.status === 'new' ? 'new' : e.status === 'ask' ? '' : e.cands[0].id, [bc, bl] = BADGE[e.status];
+    return `<div class="ct-fm" data-e="${e.i}">
+      <div class="ct-fm-h"><label class="toggle"><input type="checkbox" name="inc${e.i}" checked> <strong>${esc(ctCase(e.full.split(/\s+/)) || 'Sin nombre')}</strong></label><span class="badge ${bc}">${bl}</span></div>
+      <p class="lesson-meta">${esc(rel(e))}</p>
+      ${e.status !== 'ok' && e.cands.length ? `<label class="fld"><span>${e.status === 'ask' ? '¿Es alguna de estas personas?' : 'En Familias'}</span><select name="to${e.i}" data-to>
+        ${e.status === 'ask' ? '<option value="">Elige…</option>' : ''}${e.cands.map(p => `<option value="${p.id}" ${p.id === def ? 'selected' : ''}>Es ${esc(fmFull(p))}</option>`).join('')}
+        <option value="new">Es otra persona (crear nueva)</option></select></label>` : ''}
+      ${e.status === 'ok' ? '' : `<div data-newf ${def === 'new' ? '' : 'hidden'}>
+        <label class="fld"><span>Nombre</span><input name="nm${e.i}" maxlength="80" value="${esc(e.nm.name)}" list="ctfm${e.i}"><datalist id="ctfm${e.i}">${e.nm.opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist></label>
+        <div class="row2"><label class="fld"><span>Primer apellido</span><input name="l1${e.i}" maxlength="60" value="${esc(e.nm.last1)}"></label>
+          <label class="fld"><span>Segundo apellido</span><input name="l2${e.i}" maxlength="60" value="${esc(e.nm.last2)}"></label></div></div>`}
+    </div>`;
+  };
+  const order = { ask: 0, new: 1, same: 2, ok: 3 }, list = [...ents].sort((a, b) => order[a.status] - order[b.status] || disp(a).localeCompare(disp(b), 'es'));
+  const cnt = k => ents.filter(e => e.status === k).length, todo = list.filter(e => e.status !== 'ok'), done = list.filter(e => e.status === 'ok');
+  const sum = [cnt('ask') && `${cnt('ask')} por elegir`, cnt('new') && `${cnt('new')} ${cnt('new') === 1 ? 'nueva' : 'nuevas'}`, cnt('same') && `${cnt('same')} ya ${cnt('same') === 1 ? 'existe' : 'existen'}`, cnt('ok') && `${cnt('ok')} ya ${cnt('ok') === 1 ? 'unida' : 'unidas'}`].filter(Boolean).join(' · ');
+  openModal('Pasar a Familias', `<p class="hint">${sum}. Cada hijo queda unido a su padre y a su madre, y ellos como casados (se cambia en la ficha). El RUN no pasa a Familias.</p>
+    ${todo.map(row).join('')}
+    ${done.length ? `<details class="past"><summary>Ya en Familias (${done.length})</summary><div style="display:flex;flex-direction:column;gap:8px">${done.map(row).join('')}</div></details>` : ''}`, {
+    saveLabel: 'Pasar',
+    onSave: (fd, f) => {
+      const pick = new Map(), miss = [];
+      let noName = 0;
+      ents.forEach(e => {
+        if (fd.get('inc' + e.i) !== 'on') return;
+        const to = e.status === 'ok' ? e.cands[0].id : e.cands.length ? fd.get('to' + e.i) : 'new';
+        if (!to) return miss.push(e.i);
+        if (to !== 'new') return pick.set(e, to);
+        const v = { name: String(fd.get('nm' + e.i) || '').trim(), last1: String(fd.get('l1' + e.i) || '').trim(), last2: String(fd.get('l2' + e.i) || '').trim() };
+        if (!v.name) noName++;
+        pick.set(e, v);
+      });
+      $$('.ct-fm', f).forEach(el => el.classList.toggle('miss', miss.includes(+el.dataset.e)));
+      if (miss.length) { $(`.ct-fm[data-e="${miss[0]}"]`, f).scrollIntoView({ block: 'center', behavior: 'smooth' }); return `Falta elegir en ${miss.length} ${miss.length === 1 ? 'persona' : 'personas'} (marcadas en rojo).`; }
+      if (noName) return 'Escribe el nombre de cada persona nueva.';
+      let made = 0, links = 0;
+      const ids = new Map(), warn = [];
+      pick.forEach((v, e) => {
+        if (typeof v === 'string') { const p = fmP(v); if (p && !p.sex && e.sex) p.sex = e.sex; ids.set(e, v); return; }
+        const p = { id: uid(), created: Date.now(), ...FM_BLANK(), ...v, sex: e.sex };
+        S.people.push(p); ids.set(e, p.id); made++;
+      });
+      certs.forEach(({ c, p, f: fa, m: mo }) => {
+        const ch = ids.get(p), fi = fa && ids.get(fa), mi = mo && ids.get(mo);
+        if (ch) [[fi, 'padre'], [mi, 'madre']].forEach(([par, w]) => {
+          if (!par || fmParents(ch).includes(par)) return;
+          if (fmParents(ch).length >= 2) return warn.push(`${fmFull(fmP(ch))} ya tiene dos padres anotados: no se unió con ${fmFull(fmP(par))}.`);
+          if (par === ch || fmIsAncestor(ch, par)) return warn.push(`${fmFull(fmP(par))} no puede ser ${w} de ${fmFull(fmP(ch))} (formaría un ciclo).`);
+          S.kin.push({ id: uid(), type: 'parent', a: par, b: ch }); links++;
+        });
+        if (fi && mi && fi !== mi && !fmLinked(fi, mi)) { S.kin.push({ id: uid(), type: 'couple', a: fi, b: mi, status: 'casados' }); links++; }
+        const fm = { ...c.fm };
+        if (ch) fm.p = ch; if (fi) fm.f = fi; if (mi) fm.m = mi;
+        if (Object.keys(fm).length) c.fm = fm;
+      });
+      fmPath = null; save(); renderAll();
+      toast({ title: made || links ? 'Pasado a Familias' : 'Nada nuevo', text: [`${made} ${made === 1 ? 'persona nueva' : 'personas nuevas'}`, `${links} ${links === 1 ? 'vínculo' : 'vínculos'}`, warn.length && `${warn.length} ${warn.length === 1 ? 'aviso' : 'avisos'}`].filter(Boolean).join(' · '), icon: 'tree' });
+      if (warn.length) setTimeout(() => openModal('Vínculos que no se hicieron', `<ul class="list plain">${warn.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`, { noSave: true }));
+    },
+    onOpen: f => {
+      $$('.ct-fm', f).forEach(box => box.onchange = e => {
+        if (e.target.matches('[data-to]')) { $('[data-newf]', box).hidden = e.target.value !== 'new'; box.classList.remove('miss'); }
+        if (e.target.name?.startsWith('inc')) box.classList.toggle('off', !e.target.checked);
+      });
+    },
+  });
 }
 function ctModal(c = null) {
   const x = c || { name: '', run: '', born: '', time: '', sex: '', place: '', regNo: '', regYear: '', father: '', fatherRun: '', mother: '', motherRun: '', folio: '', code: '', issued: '', notes: '' };
@@ -5636,6 +5780,7 @@ Object.assign(ACT, {
   ctNew: () => ctModal(),
   ctEdit: el => { const c = findById(S.certs, el.dataset.id); c && ctModal(c); },
   ctDir: () => { ctDir = -ctDir; renderAll(); },
+  ctFm: () => ctFmModal(),
   ctCsv: () => {
     const list = ctList();
     if (!list.length) return toast({ title: 'Nada que descargar', text: 'Nadie coincide con la búsqueda', icon: 'warning' });
