@@ -612,6 +612,15 @@
   .tithe > div { background: var(--accent-softer); border-radius: 14px; padding: 12px; border: 1px solid var(--line); }
   .tithe strong { display: block; font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 2px; }
   .fin-form { display: grid; grid-template-columns: 120px 140px 1fr 1fr auto; gap: 8px; }
+  /* Carga masiva de movimientos */
+  dialog.modal.wide { width: min(980px, calc(100vw - 32px)); }
+  .bk-head, .bk-row { display: grid; grid-template-columns: 148px 106px 112px minmax(120px, 1fr) minmax(140px, 1.4fr) 60px 34px; gap: 6px; align-items: center; }
+  .bk-head { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); padding: 0 2px; margin-bottom: -6px; }
+  .bk-rows { display: flex; flex-direction: column; gap: 6px; }
+  .bk-row .inp { padding: 8px 9px; font-size: 14px; }
+  .bk-row.bad [data-k=amount], .bk-row.bad [data-k=date] { border-color: var(--danger); }
+  .bk-tithe { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .bk-tithe.off { visibility: hidden; }
   .mv { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px dashed var(--line); }
   .mv:last-child { border-bottom: 0; }
   .mv-ic { color: var(--accent-strong); font-size: 22px; width: 28px; text-align: center; flex: none; }
@@ -1058,6 +1067,12 @@
     .fin-form .btn { grid-column: span 2; }
   }
   @media (max-width: 760px) {
+    .bk-head { display: none; }
+    .bk-row { grid-template-columns: 1fr 1fr; padding: 8px; border: 1.5px solid var(--line); border-radius: var(--r-sm); }
+    .bk-row [data-k=note] { grid-column: span 2; }
+    .bk-row [data-bk-del] { justify-self: end; }
+  }
+  @media (max-width: 760px) {
     .app { grid-template-columns: 1fr; }
     .nav { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; flex-direction: row; justify-content: space-around; gap: 0;
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface-solid) 94%, transparent); z-index: 50; }
@@ -1455,8 +1470,10 @@ function alertUser(title, text, icon, actions = []) {
 
 /* ---------- Modal ---------- */
 const modal = $('#modal');
-function openModal(title, body, { onSave, onDelete, saveLabel = 'Guardar', noSave = false, onOpen } = {}) {
+function openModal(title, body, { onSave, onDelete, saveLabel = 'Guardar', noSave = false, onOpen, wide = false, keep = false } = {}) {
   const f = $('#modalForm');
+  modal.classList.toggle('wide', wide);
+  modal.dataset.keep = keep ? '1' : '';
   f.innerHTML = `
     <header class="modal-h"><h3>${esc(title)}</h3><button type="button" class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></header>
     <div class="modal-b">${body}<p class="modal-err" hidden></p></div>
@@ -1483,7 +1500,8 @@ function openModal(title, body, { onSave, onDelete, saveLabel = 'Guardar', noSav
   const first = $('input:not([type=checkbox]):not([type=radio]), textarea, select', f);
   first && first.focus();
 }
-modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
+// keep: tocar fuera no cierra (formularios largos que no conviene perder).
+modal.addEventListener('click', e => { if (e.target === modal && !modal.dataset.keep) modal.close(); });
 
 /* ---------- Actividades del planner ---------- */
 function eventTrigger(e, k = e.date) {
@@ -3075,6 +3093,7 @@ function renderFinanzas(root) {
     <div class="page-h"><div><h1>Finanzas</h1><p class="sub">${cap(MESES[finMonth.getMonth()])} ${finMonth.getFullYear()}</p></div>
       <div class="toolbar">
         <div class="navgrp"><button class="icon-btn" data-act="finNav" data-d="-1" aria-label="Mes anterior">${ic('caret-left')}</button><button class="btn btn-sm" data-act="finToday">Este mes</button><button class="icon-btn" data-act="finNav" data-d="1" aria-label="Mes siguiente">${ic('caret-right')}</button></div>
+        <button class="btn" data-act="mvBulk">${ic('list-plus')} Cargar varios</button>
         <button class="btn btn-primary" data-act="mvNew">${ic('plus')} Movimiento</button>
       </div></div>
     <div class="tiles">
@@ -3144,6 +3163,144 @@ function mvModal(m = null) {
       save(); renderAll();
     },
     onDelete: m ? () => { S.money = S.money.filter(y => y !== m); save(); renderAll(); } : null,
+  });
+}
+// Carga masiva: tabla de filas editables. Acepta pegar varias filas desde Excel (tabuladas), con ; o
+// una línea por movimiento con espacios ("3/11 5.990 uber"). Monto negativo = gasto, con + = ingreso.
+const BK_TYPES = { gasto: 'gasto', cargo: 'gasto', egreso: 'gasto', ingreso: 'ingreso', abono: 'ingreso', deposito: 'ingreso' };
+const bkEmpty = r => !$('[data-k=amount]', r).value.trim() && !$('[data-k=note]', r).value.trim();
+// Último movimiento con el mismo detalle: sugiere tipo y categoría.
+const bkGuess = note => { const n = sNorm(note).trim(); return n ? S.money.findLast(m => sNorm(m.note).trim() === n) : null; };
+function bkDate(s) {
+  let y, mo, d, m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) [, y, mo, d] = m;
+  else if ((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{4}|\d{2}))?$/))) [, d, mo, y] = m;
+  else return null;
+  const now = new Date(), yy = y ? (y.length === 2 ? 2000 + +y : +y) : now.getFullYear();
+  let dt = new Date(yy, mo - 1, +d);
+  if (dt.getMonth() !== mo - 1 || dt.getDate() !== +d) return null;
+  if (!y && dt > now) dt = new Date(yy - 1, mo - 1, +d); // sin año: el más reciente que ya pasó
+  return ymd(dt);
+}
+function bkCat(s, type) {
+  const n = sNorm(s).trim();
+  for (const t of type ? [type] : ['gasto', 'ingreso'])
+    for (const [k, [l]] of Object.entries(mvCats(t))) if (n === k || n === sNorm(l) || (n.length > 3 && sNorm(l).startsWith(n))) return { type: t, cat: k };
+  return null;
+}
+function bkParse(text) {
+  return text.split(/\r?\n/).map(line => {
+    const cellMode = /[\t;]/.test(line);
+    const cells = (line.includes('\t') ? line.split('\t') : cellMode ? line.split(';') : line.split(/\s+/)).map(c => c.trim().replace(/^"|"$/g, '')).filter(Boolean);
+    const r = {}, rest = [];
+    let sign = '', type = '';
+    cells.forEach(c => {
+      if (!r.date && (r.date = bkDate(c))) return;
+      if (!type && BK_TYPES[sNorm(c)]) { type = BK_TYPES[sNorm(c)]; return; }
+      if (/^[+\-−]?\s*\$?\s*\d[\d.]*(,\d+)?$/.test(c)) {
+        if (r.amount == null) { r.amount = Math.abs(parseAmount(c.replace('−', '-'))); sign = /^[-−]/.test(c) ? 'gasto' : c[0] === '+' ? 'ingreso' : ''; return; }
+        if (cellMode) return; // otras columnas numéricas (saldo) se ignoran
+      }
+      rest.push(c);
+    });
+    type = type || sign;
+    const note = [];
+    rest.forEach(c => { const k = cellMode && !r.cat && bkCat(c, type); if (k) { type = type || k.type; r.cat = k.cat; } else note.push(c); });
+    r.note = note.join(' ').slice(0, 80);
+    const g = !r.cat && bkGuess(r.note);
+    if (g && (!type || g.type === type)) { type = g.type; r.cat = g.cat; }
+    r.type = type || 'gasto';
+    if (!mvCats(r.type)[r.cat]) delete r.cat;
+    if (!(r.amount > 0)) delete r.amount;
+    if (!r.date) delete r.date;
+    return r;
+  }).filter(r => r.amount || r.note);
+}
+function bkRow(x = {}) {
+  const t = x.type || 'gasto';
+  return `<div class="bk-row">
+    <input type="date" class="inp" data-k="date" value="${x.date || defaultMvDate()}" aria-label="Fecha">
+    <select class="inp" data-k="type" aria-label="Tipo"><option value="gasto">Gasto</option><option value="ingreso" ${t === 'ingreso' ? 'selected' : ''}>Ingreso</option></select>
+    <input class="inp" data-k="amount" inputmode="decimal" placeholder="Monto" value="${x.amount ? fmtIn(x.amount) : ''}" aria-label="Monto">
+    <select class="inp" data-k="cat" aria-label="Categoría">${mvCatOptions(t, x.cat)}</select>
+    <input class="inp" data-k="note" maxlength="80" placeholder="Detalle" value="${esc(x.note || '')}" aria-label="Detalle">
+    <label class="bk-tithe ${t === 'ingreso' ? '' : 'off'}" title="Cuenta para el diezmo"><input type="checkbox" class="chk" data-k="tithe"> 10%</label>
+    <button type="button" class="icon-btn" data-bk-del aria-label="Quitar fila">${ic('x')}</button>
+  </div>`;
+}
+function mvBulkModal() {
+  openModal('Cargar movimientos', `
+    <p class="hint" style="margin:0">Anota los movimientos pendientes y guárdalos todos juntos. Enter pasa a la fila de abajo. También puedes pegar varias filas desde Excel o una línea por movimiento: <em>3/11 5.990 uber</em> (negativo = gasto, con + = ingreso).</p>
+    <div class="bk-head" aria-hidden="true"><span>Fecha</span><span>Tipo</span><span>Monto</span><span>Categoría</span><span>Detalle</span><span>Diezmo</span><span></span></div>
+    <div class="bk-rows">${bkRow()}${bkRow()}${bkRow()}</div>
+    <div class="btns"><button type="button" class="btn btn-sm" data-bk-add>${ic('plus')} Fila</button><span class="grow"></span><span class="lesson-meta" data-bk-sum></span></div>`, {
+    wide: true, keep: true,
+    onOpen: f => {
+      const rows = $('.bk-rows', f), sub = $('.modal-f [type=submit]', f), sum = $('[data-bk-sum]', f);
+      const upd = () => {
+        let n = 0, out = 0, inc = 0;
+        $$('.bk-row', rows).forEach(r => {
+          const a = parseAmount($('[data-k=amount]', r).value);
+          if (!(a > 0)) return;
+          n++;
+          if ($('[data-k=type]', r).value === 'ingreso') inc += a; else out += a;
+        });
+        sum.textContent = n ? [`${n} ${n === 1 ? 'movimiento' : 'movimientos'}`, out && `−${money(out)}`, inc && `+${money(inc)}`].filter(Boolean).join(' · ') : '';
+        sub.textContent = n ? `Guardar ${n}` : 'Guardar';
+      };
+      const add = (html = bkRow({ date: $('.bk-row:last-child [data-k=date]', rows)?.value })) => { rows.insertAdjacentHTML('beforeend', html); return rows.lastElementChild; };
+      $('[data-bk-add]', f).onclick = () => $('[data-k=amount]', add()).focus();
+      rows.addEventListener('click', e => {
+        const b = e.target.closest('[data-bk-del]');
+        if (!b) return;
+        b.closest('.bk-row').remove();
+        if (!rows.children.length) add();
+        upd();
+      });
+      rows.addEventListener('input', upd);
+      rows.addEventListener('change', e => {
+        const r = e.target.closest('.bk-row'), k = e.target.dataset.k, type = $('[data-k=type]', r).value;
+        if (k === 'type') { $('[data-k=cat]', r).innerHTML = mvCatOptions(type); $('.bk-tithe', r).classList.toggle('off', type !== 'ingreso'); delete r.dataset.touched; }
+        if (k === 'cat') r.dataset.touched = '1';
+        if (k === 'note' && !r.dataset.touched) { const g = bkGuess(e.target.value); if (g && g.type === type) $('[data-k=cat]', r).value = g.cat; }
+        upd();
+      });
+      rows.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' || e.target.tagName !== 'INPUT' || e.target.type === 'checkbox') return;
+        e.preventDefault();
+        const next = e.target.closest('.bk-row').nextElementSibling || add();
+        $(`[data-k=${e.target.dataset.k}]`, next).focus();
+      });
+      rows.addEventListener('paste', e => {
+        const text = e.clipboardData?.getData('text') || '';
+        if (!/[\t\n]/.test(text.trim())) return;
+        const parsed = bkParse(text);
+        if (!parsed.length) return;
+        e.preventDefault();
+        $$('.bk-row', rows).forEach(r => bkEmpty(r) && r.remove());
+        parsed.forEach(p => add(bkRow(p)));
+        upd();
+        toast({ title: `${parsed.length} ${parsed.length === 1 ? 'fila pegada' : 'filas pegadas'}`, text: 'Revisa tipo y categoría antes de guardar', icon: 'clipboard-text' });
+      });
+      upd();
+    },
+    onSave: (fd, f) => {
+      const out = [];
+      let bad = null;
+      $$('.bk-row', f).forEach(r => {
+        r.classList.remove('bad');
+        if (bkEmpty(r)) return;
+        const v = k => $(`[data-k=${k}]`, r), amount = parseAmount(v('amount').value), date = v('date').value, type = v('type').value;
+        if (!(amount > 0) || !date) { r.classList.add('bad'); bad = bad || r; return; }
+        out.push({ type, amount, cat: v('cat').value, date, note: v('note').value.trim(), tithe: type === 'ingreso' && v('tithe').checked });
+      });
+      if (bad) { $('[data-k=amount]', bad).focus(); return 'Revisa las filas marcadas: falta el monto o la fecha.'; }
+      if (!out.length) return 'Anota al menos un movimiento.';
+      const now = Date.now(), dates = out.map(m => m.date).sort();
+      out.forEach((m, i) => S.money.push({ id: uid(), created: now + i, ...m }));
+      save(); renderAll();
+      toast({ title: `${out.length} ${out.length === 1 ? 'movimiento anotado' : 'movimientos anotados'}`, text: dates[0] === dates.at(-1) ? shortDate(dates[0]) : `Del ${shortDate(dates[0])} al ${shortDate(dates.at(-1))}`, icon: 'wallet' });
+    },
   });
 }
 
@@ -3417,6 +3574,7 @@ Object.assign(ACT, {
   bdEdit: el => { const b = findById(S.birthdays, el.dataset.id); b && bdModal(b); },
 
   mvNew: () => mvModal(),
+  mvBulk: () => mvBulkModal(),
   openingSet: () => openingModal(),
   owNew: () => owModal(),
   owEdit: el => { const o = findById(S.owed, el.dataset.id); o && owModal(o); },
