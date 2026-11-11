@@ -568,6 +568,40 @@
   .place-b { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .place-list { max-height: 480px; overflow: auto; }
   .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  /* Salidas */
+  .tr-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .tr-li { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; border-radius: var(--r-sm); cursor: pointer; overflow-wrap: anywhere; }
+  .tr-li:hover { background: var(--accent-softer); }
+  .tr-li.on { background: var(--accent-soft); }
+  .tr-li:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .tr-tiles { margin: 0 0 14px; gap: 10px; }
+  .tr-tiles .tile { padding: 12px 14px; }
+  .tr-tiles .tile strong { font-size: 20px; }
+  .tr-map-wrap { position: relative; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--line); }
+  .tr-map { height: 380px; }
+  .tr-stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .tr-stop { padding: 12px; border-radius: 14px; background: var(--accent-softer); border: 1px solid var(--line); }
+  .tr-stop.done { opacity: .62; }
+  .tr-stop-h { display: flex; gap: 10px; align-items: center; }
+  .tr-n { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--accent-strong); color: var(--on-accent); font: inherit; font-weight: 800; cursor: pointer; display: grid; place-items: center; }
+  .tr-stop.done .tr-n { background: var(--muted); }
+  .tr-tools { display: flex; flex: none; }
+  .tr-tools .icon-btn:disabled { opacity: .3; cursor: default; }
+  .tr-stop-f { display: flex; gap: 8px; margin: 10px 0 0; flex-wrap: wrap; }
+  .tr-mini { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 18px; flex: 1 1 150px; }
+  .tr-mini .inp { padding: 7px 9px; font-size: 14px; }
+  .tr-items { list-style: none; margin: 8px 0 0; padding: 0; }
+  .tr-items li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .tr-items li span { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+  .tr-items li.done span { text-decoration: line-through; color: var(--muted); }
+  .tr-items .icon-btn { width: 28px; height: 28px; font-size: 16px; }
+  .tr-add { display: flex; gap: 6px; margin-top: 8px; }
+  .tr-add .inp { padding: 7px 10px; font-size: 14px; }
+  .tr-leg { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 6px 0 6px 20px; margin-left: 14px; border-left: 2px dashed var(--line); font-size: 13px; font-weight: 700; color: var(--muted); min-height: 30px; }
+  .tr-leg a { color: var(--accent-strong); }
+  .pin .tr-pin-n { font-family: var(--font-body); font-weight: 800; font-size: 15px; }
+  .pin.off span { border-color: var(--muted); }
+  .pin.off b { color: var(--muted); }
   .pill.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); color: var(--muted); }
   .map.leaflet-container { font-family: var(--font-body); }
   .map .leaflet-popup-content-wrapper { border-radius: 16px; }
@@ -1106,6 +1140,7 @@
     #modal .modal-f { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
     .guide, .guide-top, .pg-grid { grid-template-columns: 1fr; }
     .map { height: 420px; }
+    .tr-map { height: 300px; }
     .mm-wrap { height: calc(100vh - 330px); height: calc(100dvh - 330px); min-height: 360px; }
     .hbar { grid-template-columns: 90px 1fr auto; gap: 8px; }
     .tithe { grid-template-columns: 1fr; }
@@ -1154,6 +1189,7 @@
     <div class="nav-g">Herramientas</div>
     <button class="nav-btn" data-act="go" data-view="ideas"><span class="ic"><i class="ph-duotone ph-brain" aria-hidden="true"></i></span><span>Mapa mental</span></button>
     <button class="nav-btn" data-act="go" data-view="lugares"><span class="ic"><i class="ph-duotone ph-map-trifold" aria-hidden="true"></i></span><span>Lugares</span></button>
+    <button class="nav-btn" data-act="go" data-view="salidas"><span class="ic"><i class="ph-duotone ph-path" aria-hidden="true"></i></span><span>Salidas</span></button>
     <button class="nav-btn nav-fix" data-act="go" data-view="finanzas"><span class="ic"><i class="ph-duotone ph-wallet" aria-hidden="true"></i></span><span>Finanzas</span></button>
     <button class="nav-btn" data-act="go" data-view="ayudas"><span class="ic"><i class="ph-duotone ph-notepad" aria-hidden="true"></i></span><span>Ayudas de memoria</span></button>
     <button class="nav-btn" data-act="go" data-view="certificados"><span class="ic"><i class="ph-duotone ph-identification-card" aria-hidden="true"></i></span><span>Certificados</span></button>
@@ -1180,6 +1216,7 @@
     <section class="view" id="view-familias" hidden></section>
     <section class="view" id="view-ideas" hidden></section>
     <section class="view" id="view-lugares" hidden></section>
+    <section class="view" id="view-salidas" hidden></section>
     <section class="view" id="view-finanzas" hidden></section>
     <section class="view" id="view-ayudas" hidden></section>
     <section class="view" id="view-certificados" hidden></section>
@@ -1290,7 +1327,7 @@ const defaults = () => ({
   todos: [], todoLists: [], todoList: 'todas',
   media: [], mediaLog: [],
   people: [], kin: [], meId: null, netPos: {}, ministries: fmMinDefault(),
-  certs: [],
+  certs: [], trips: [],
   plannerView: 'semana', showBlocks: true, lastView: 'inicio',
   darkMode: 'auto', darkFrom: '20:00', darkTo: '07:00',
 });
@@ -1308,7 +1345,7 @@ function normalize(raw) {
   if (!s.habitLog || typeof s.habitLog !== 'object' || Array.isArray(s.habitLog)) s.habitLog = {};
   if (!s.netPos || typeof s.netPos !== 'object' || Array.isArray(s.netPos)) s.netPos = {};
   ['events', 'blocks', 'reminders', 'prayers', 'sermons', 'churchTodos', 'board', 'timers',
-   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog', 'people', 'kin', 'certs'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+   'lessons', 'mindmaps', 'places', 'birthdays', 'money', 'savings', 'savingsMoves', 'owed', 'verses', 'verseLog', 'habits', 'memos', 'memoBoards', 'todos', 'todoLists', 'media', 'mediaLog', 'people', 'kin', 'certs', 'trips'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   if (!s.memoBoards.length) s.memoBoards = [{ id: 'general', name: 'General' }];   // id fijo: igual en todos los dispositivos
   if (!s.todoLists.some(l => l.id === 'general')) s.todoLists.unshift({ id: 'general', name: 'General' });
   s.todos.forEach(t => { if (!s.todoLists.some(l => l.id === t.list)) t.list = 'general'; });   // lista borrada en otro dispositivo
@@ -2748,6 +2785,17 @@ const placeItem = p => `<li class="place"><span class="place-ic">${ic(placeIcon(
   <div class="btns" style="margin-top:6px"><button class="btn btn-sm" data-act="placeGo" data-id="${p.id}">Ver</button>
   <a class="btn btn-sm" href="${dirUrl(p)}" target="_blank" rel="noopener">Cómo llegar</a>
   <button class="btn btn-sm" data-act="placeEdit" data-id="${p.id}">Editar</button></div></div></li>`;
+// Búsqueda de direcciones con Photon (gratis, sin clave), sesgada al centro c del mapa.
+async function photon(q, c) {
+  const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6${c ? `&lat=${c.lat.toFixed(4)}&lon=${c.lng.toFixed(4)}` : ''}`);
+  if (!r.ok) throw new Error('http');
+  const j = await r.json();
+  return (j.features || []).map(ft => {
+    const pr = ft.properties || {}, [lng, lat] = ft.geometry.coordinates;
+    const street = [pr.street, pr.housenumber].filter(Boolean).join(' ');
+    return { name: pr.name || street || q, addr: [street !== pr.name ? street : '', pr.city || pr.county, pr.state, pr.country].filter(Boolean).join(', '), lat, lng };
+  });
+}
 function renderLugares(root) {
   const list = S.places.filter(p => placeFilter === 'todos' || p.cat === placeFilter).sort((a, b) => a.name.localeCompare(b.name, 'es'));
   const used = [...new Set(S.places.map(p => p.cat))];
@@ -3336,7 +3384,7 @@ function applyDecor() {
 }
 
 const VIEWS = { inicio: renderInicio, planner: renderPlanner, horario: renderHorario, iglesia: renderIglesia, timers: renderTimers, decorar: renderDecorar,
-  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora, familias: renderFamilias, certificados: renderCertificados };
+  habitos: renderHabitos, estudio: renderEstudio, premios: renderPremios, versiculos: renderVersiculos, ideas: renderIdeas, lugares: renderLugares, salidas: renderSalidas, cumples: renderCumples, finanzas: renderFinanzas, ayudas: renderAyudas, tareas: renderTareas, bitacora: renderBitacora, familias: renderFamilias, certificados: renderCertificados };
 let current = VIEWS[S.lastView] ? S.lastView : 'inicio';
 function renderAll() { VIEWS[current]($('#view-' + current)); updateTickers(); }
 function go(v) {
@@ -3640,14 +3688,7 @@ Object.assign(FORMS, {
     lastSearch = q;
     const c = placesMap && placesMap.getCenter();
     try {
-      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6${c ? `&lat=${c.lat.toFixed(4)}&lon=${c.lng.toFixed(4)}` : ''}`);
-      if (!r.ok) throw new Error('http');
-      const j = await r.json();
-      searchResults = (j.features || []).map(ft => {
-        const pr = ft.properties || {}, [lng, lat] = ft.geometry.coordinates;
-        const street = [pr.street, pr.housenumber].filter(Boolean).join(' ');
-        return { name: pr.name || street || q, addr: [street !== pr.name ? street : '', pr.city || pr.county, pr.state, pr.country].filter(Boolean).join(', '), lat, lng };
-      });
+      searchResults = await photon(q, c);
       if (!searchResults.length) { toast({ title: 'Sin resultados', text: q, icon: 'magnifying-glass' }); return; }
       mapView = { c: [searchResults[0].lat, searchResults[0].lng], z: 15 };
       renderAll();
@@ -6107,6 +6148,296 @@ Object.assign(INP, {
   },
 });
 
+/* ---------- Salidas (rutas) ---------- */
+// S.trips = [{ id, title, date, time, mode, notes, done, created, stops: [{ id, name, address, lat, lng, time, budget, notes, done, items: [{ id, text, done }] }] }]
+// Ruta por calles con OSRM de FOSSGIS (routing.openstreetmap.de, gratis y sin clave); no se guarda, se cachea en memoria.
+// Transporte público no tiene ruteo libre: el mapa une las paradas con línea punteada y Google Maps arma el viaje por tramo.
+const TR_MODES = { auto: ['Auto', 'car', 'routed-car', 'driving'], pie: ['A pie', 'person-simple-walk', 'routed-foot', 'walking'],
+  bici: ['Bici', 'bicycle', 'routed-bike', 'bicycling'], micro: ['Transporte público', 'bus', null, 'transit'] };
+let trSel = null, trMap = null, trView = null, trResults = [], trLastQ = '';
+const trRoutes = new Map();
+const trCur = () => findById(S.trips, trSel);
+const trMode = t => TR_MODES[t.mode] || TR_MODES.auto;
+const trStop = id => { for (const t of S.trips) { const x = t.stops.find(y => y.id === id); if (x) return [t, x]; } return []; };
+const trUpcoming = t => !t.done && (!t.date || t.date >= ymd(new Date()));
+function trList() {
+  const up = S.trips.filter(trUpcoming).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999') || a.created - b.created);
+  const past = S.trips.filter(t => !trUpcoming(t)).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.created - a.created);
+  return { up, past };
+}
+const trKm = m => m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`;
+const trMin = sec => { const m = Math.max(1, Math.round(sec / 60)); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`; };
+const trLL = x => `${x.lat},${x.lng}`;
+// Google Maps: desde donde estés, por las paradas pendientes en orden (transporte público solo admite un destino: la siguiente).
+function trGmaps(t) {
+  const p = t.stops.filter(x => !x.done), mode = trMode(t)[3];
+  if (!p.length) return null;
+  if (mode === 'transit') return { url: `https://www.google.com/maps/dir/?api=1&destination=${trLL(p[0])}&travelmode=transit`, label: 'Ir a la siguiente parada' };
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${trLL(p.at(-1))}&travelmode=${mode}`;
+  if (p.length > 1) url += `&waypoints=${encodeURIComponent(p.slice(0, -1).map(trLL).join('|'))}`;
+  return { url, label: p.length > 1 ? 'Abrir ruta en Google Maps' : 'Cómo llegar' };
+}
+const trLegUrl = (t, a, b) => `https://www.google.com/maps/dir/?api=1${a ? `&origin=${trLL(a)}` : ''}&destination=${trLL(b)}&travelmode=${trMode(t)[3]}`;
+function trRoute(t) {
+  const srv = trMode(t)[2];
+  if (!srv || t.stops.length < 2) return Promise.resolve(null);
+  const coords = t.stops.map(x => `${x.lng},${x.lat}`).join(';'), key = srv + '|' + coords;
+  if (!trRoutes.has(key)) {
+    trRoutes.set(key, fetch(`https://routing.openstreetmap.de/${srv}/route/v1/driving/${coords}?overview=full&geometries=geojson`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('http')))
+      .then(j => { if (j.code !== 'Ok' || !j.routes?.[0]) throw new Error(j.code); return j.routes[0]; })
+      .catch(() => { trRoutes.delete(key); return null; }));
+  }
+  return trRoutes.get(key);
+}
+function trCounts(t) {
+  const items = t.stops.flatMap(x => x.items), done = items.filter(i => i.done).length;
+  const txt = items.length ? `${done}/${items.length}` : '—';
+  $$(`[data-tr-items="${t.id}"]`).forEach(el => { el.textContent = txt; });
+  const b = t.stops.reduce((a, x) => a + (Number(x.budget) || 0), 0);
+  $$(`[data-tr-budget="${t.id}"]`).forEach(el => { el.textContent = b ? money(b) : '—'; });
+}
+const trItemsHtml = x => `<ul class="tr-items">${x.items.map(i => `<li class="${i.done ? 'done' : ''}"><input type="checkbox" class="chk" data-chg="trItem" data-id="${x.id}" data-item="${i.id}" ${i.done ? 'checked' : ''} aria-label="Marcar"><span>${esc(i.text)}</span>
+  <button class="icon-btn" data-act="trItemDel" data-id="${x.id}" data-item="${i.id}" aria-label="Quitar">${ic('x')}</button></li>`).join('')}</ul>`;
+function trStopHtml(t, x, i) {
+  const n = t.stops.length;
+  return `<li class="tr-stop ${x.done ? 'done' : ''}" id="${x.id}">
+    <div class="tr-stop-h">
+      <button class="tr-n" data-act="trStopDone" data-id="${x.id}" title="${x.done ? 'Marcar pendiente' : 'Marcar visitada'}" aria-label="${x.done ? 'Marcar pendiente' : 'Marcar visitada'}">${x.done ? ic('check') : i + 1}</button>
+      <button class="mv-main" data-act="trStopEdit" data-id="${x.id}"><strong>${esc(x.name)}</strong>${x.address ? `<span class="lesson-meta">${esc(x.address)}</span>` : ''}</button>
+      <div class="tr-tools">
+        <button class="icon-btn" data-act="trStopMove" data-id="${x.id}" data-d="-1" aria-label="Subir" ${i ? '' : 'disabled'}>${ic('caret-up')}</button>
+        <button class="icon-btn" data-act="trStopMove" data-id="${x.id}" data-d="1" aria-label="Bajar" ${i < n - 1 ? '' : 'disabled'}>${ic('caret-down')}</button>
+      </div>
+    </div>
+    <div class="tr-stop-f">
+      <label class="tr-mini" title="Hora">${ic('clock')}<input type="time" class="inp" data-chg="trStopTime" data-id="${x.id}" value="${x.time || ''}" aria-label="Hora"></label>
+      <label class="tr-mini" title="Presupuesto">${ic('coins')}<input class="inp" inputmode="decimal" data-chg="trStopBudget" data-id="${x.id}" value="${x.budget ? fmtIn(x.budget) : ''}" placeholder="Presupuesto" aria-label="Presupuesto"></label>
+    </div>
+    ${x.notes ? `<p class="hint" style="margin:8px 0 0">${esc(x.notes)}</p>` : ''}
+    ${trItemsHtml(x)}
+    <form class="tr-add" data-form="trItemAdd" data-id="${x.id}"><input class="inp" name="text" maxlength="100" placeholder="Qué voy a buscar…" aria-label="Qué voy a buscar"><button class="btn btn-sm">${ic('plus')}</button></form>
+  </li>`;
+}
+const trLegHtml = (t, i) => {
+  const a = i ? t.stops[i - 1] : null, b = t.stops[i];
+  return `<li class="tr-leg" data-leg="${i}">${ic(trMode(t)[1])} <span data-leg-txt>${i ? '' : 'Desde donde estés'}</span>
+    <a href="${trLegUrl(t, a, b)}" target="_blank" rel="noopener">Cómo llegar</a></li>`;
+};
+function renderSalidas(root) {
+  const { up, past } = trList();
+  if (!trCur()) trSel = (up[0] || past[0])?.id || null;
+  const t = trCur();
+  const li = x => { const items = x.stops.flatMap(y => y.items);
+    return `<button class="tr-li ${x.id === trSel ? 'on' : ''}" data-act="trPick" data-id="${x.id}"><strong>${esc(x.title)}</strong>
+      <span class="lesson-meta">${x.date ? shortDate(x.date) : 'Sin fecha'}${x.time ? ' · ' + x.time : ''} · ${x.stops.length} ${x.stops.length === 1 ? 'parada' : 'paradas'}${items.length ? ` · ${items.filter(i => i.done).length}/${items.length} cosas` : ''}</span></button>`; };
+  const side = `<section class="card span-4">
+    <div class="card-h"><h2>Mis salidas</h2></div>
+    ${up.length ? `<div class="list">${up.map(li).join('')}</div>` : empty(past.length ? 'No tienes salidas pendientes' : 'Aún no planeas salidas', 'path')}
+    ${past.length ? `<details class="past"><summary>Anteriores (${past.length})</summary><div class="list">${past.map(li).join('')}</div></details>` : ''}
+  </section>`;
+  if (!t) {
+    root.innerHTML = `<div class="page-h"><div><h1>Salidas</h1><p class="sub">Planea a dónde ir y qué vas a buscar en cada parada.</p></div>
+      <button class="btn btn-primary" data-act="trNew">${ic('plus')} Salida</button></div><div class="grid">${side}</div>`;
+    return;
+  }
+  const g = trGmaps(t), [ml] = trMode(t);
+  root.innerHTML = `
+    <div class="page-h"><div><h1>Salidas</h1><p class="sub">Planea a dónde ir y qué vas a buscar en cada parada.</p></div>
+      <button class="btn btn-primary" data-act="trNew">${ic('plus')} Salida</button></div>
+    <div class="grid">
+      ${side}
+      <div class="span-8 tr-main">
+        <section class="card">
+          <div class="card-h"><div><h2>${esc(t.title)}</h2><p class="lesson-meta" style="margin:2px 0 0">${t.date ? (d => `${cap(DIAS[dow(d)])} ${d.getDate()} de ${MESES[d.getMonth()]}`)(fromYmd(t.date)) : 'Sin fecha'}${t.time ? ' · sales a las ' + t.time : ''}${t.done ? ' · Ya fuiste' : ''}</p></div>
+            <div class="btns"><button class="btn btn-sm" data-act="trEdit">${ic('pencil-simple')} Editar</button><button class="btn btn-sm" data-act="trDup">${ic('copy')} Duplicar</button></div></div>
+          ${t.notes ? `<p class="hint">${esc(t.notes)}</p>` : ''}
+          <div class="filters">${Object.entries(TR_MODES).map(([k, [l, i]]) => `<button class="pill ${(t.mode || 'auto') === k ? '' : 'off'}" data-act="trMode" data-m="${k}">${ic(i)} ${l}</button>`).join('')}</div>
+          <div class="tiles tr-tiles">
+            <div class="tile"><span>Paradas</span><strong>${t.stops.length}</strong></div>
+            <div class="tile"><span>Recorrido</span><strong data-tr-dist>${trMode(t)[2] && t.stops.length > 1 ? '…' : '—'}</strong><small data-tr-time></small></div>
+            <div class="tile"><span>Presupuesto</span><strong data-tr-budget="${t.id}"></strong></div>
+            <div class="tile"><span>Cosas</span><strong data-tr-items="${t.id}"></strong></div>
+          </div>
+          <div class="tr-map-wrap"><div class="map tr-map" data-tr-map></div><div class="map-msg" data-tr-msg>Cargando mapa…</div></div>
+          <p class="hint" style="margin:8px 0 0">Toca el mapa para agregar una parada. Arrastra un número para moverla.${trMode(t)[2] ? '' : ` En ${ml.toLowerCase()} la línea es solo referencia; usa “Cómo llegar” en cada tramo.`}</p>
+          ${g ? `<div class="btns" style="margin-top:12px"><a class="btn btn-primary" href="${g.url}" target="_blank" rel="noopener">${ic('navigation-arrow')} ${g.label}</a></div>` : ''}
+        </section>
+        <section class="card">
+          <div class="card-h"><h2>Paradas</h2></div>
+          <form class="rem-form" data-form="trSearch"><input class="inp" name="q" required maxlength="120" placeholder="Buscar dirección o lugar…" value="${esc(trLastQ)}" style="flex:1 1 200px;width:auto"><button class="btn btn-primary btn-sm">Buscar</button></form>
+          ${S.places.length ? `<select class="inp" data-chg="trFromPlace" style="margin-top:8px" aria-label="Agregar desde mis lugares"><option value="">Agregar desde mis lugares…</option>${[...S.places].sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>` : ''}
+          ${trResults.length ? `<ul class="search-res">${trResults.map((r, i) => `<li class="place"><span class="place-ic">${ic('magnifying-glass')}</span><div class="place-b"><strong>${esc(r.name)}</strong>
+            ${r.addr ? `<div class="lesson-meta">${esc(r.addr)}</div>` : ''}<div class="btns" style="margin-top:6px"><button class="btn btn-sm btn-primary" data-act="trResAdd" data-i="${i}">${ic('plus')} Agregar</button></div></div></li>`).join('')}</ul>
+            <button class="btn btn-sm" data-act="trResClear" style="margin-top:8px">Cerrar resultados</button>` : ''}
+          <div style="margin-top:14px">${t.stops.length ? `<ul class="tr-stops">${t.stops.map((x, i) => trLegHtml(t, i) + trStopHtml(t, x, i)).join('')}</ul>` : empty('Agrega la primera parada', 'map-pin')}</div>
+        </section>
+      </div>
+    </div>`;
+  trCounts(t);
+  trMount(t);
+}
+async function trMount(t) {
+  const el = $('[data-tr-map]'), msg = $('[data-tr-msg]');
+  if (!el) return;
+  try { await loadLeaflet(); }
+  catch { if (msg) msg.textContent = 'No pude cargar el mapa. Revisa tu conexión a internet.'; return; }
+  if (!el.isConnected) return;
+  msg && msg.remove();
+  if (trMap) { trMap.remove(); trMap = null; }
+  const map = trMap = L.map(el);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+  const pts = t.stops.map(x => [x.lat, x.lng]);
+  if (trView?.id === t.id) map.setView(trView.c, trView.z);
+  else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 16 });
+  else if (S.places.length) map.fitBounds(L.latLngBounds(S.places.map(p => [p.lat, p.lng])).pad(0.3), { maxZoom: 14 });
+  else map.setView([-33.4489, -70.6693], 12);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-strong').trim() || '#cf5a8a';
+  let line = pts.length > 1 ? L.polyline(pts, { color: accent, weight: 3, opacity: .75, dashArray: '6 8' }).addTo(map) : null;
+  t.stops.forEach((x, i) => {
+    const icon = L.divIcon({ className: `pin${x.done ? ' off' : ''}`, html: `<span><b class="tr-pin-n">${i + 1}</b></span>`, iconSize: [36, 36], iconAnchor: [18, 43], popupAnchor: [0, -40] });
+    const mk = L.marker([x.lat, x.lng], { icon, draggable: true, title: x.name }).addTo(map);
+    const pop = document.createElement('div');
+    pop.className = 'pop';
+    pop.innerHTML = `<b>${i + 1}. ${esc(x.name)}</b>${x.address ? `<small>${esc(x.address)}</small>` : ''}<div class="btns"><a class="btn btn-sm" href="${trLegUrl(t, null, x)}" target="_blank" rel="noopener">Cómo llegar</a><button class="btn btn-sm" type="button">Editar</button></div>`;
+    $('button', pop).onclick = () => trStopModal(t, x);
+    mk.bindPopup(pop);
+    mk.on('dragend', () => { const ll = mk.getLatLng(); x.lat = +ll.lat.toFixed(6); x.lng = +ll.lng.toFixed(6); save(); renderAll(); });
+  });
+  map.on('click', e => trStopModal(t, null, { lat: +e.latlng.lat.toFixed(6), lng: +e.latlng.lng.toFixed(6) }));
+  map.on('moveend', () => { trView = { id: t.id, c: map.getCenter(), z: map.getZoom() }; });
+  setTimeout(() => map.invalidateSize(), 60);
+  const r = await trRoute(t);
+  const dist = $('[data-tr-dist]');
+  if (map !== trMap || !el.isConnected || !dist) return;
+  if (!r) { if (trMode(t)[2] && t.stops.length > 1) dist.textContent = 'Sin ruta'; return; }
+  line && line.remove();
+  line = L.geoJSON(r.geometry, { style: { color: accent, weight: 5, opacity: .8 } }).addTo(map);
+  dist.textContent = trKm(r.distance);
+  $('[data-tr-time]').textContent = `≈ ${trMin(r.duration)} en ${trMode(t)[0].toLowerCase()}`;
+  r.legs.forEach((lg, i) => { const el = $(`[data-leg="${i + 1}"] [data-leg-txt]`); if (el) el.textContent = `${trMin(lg.duration)} · ${trKm(lg.distance)}`; });
+}
+function trModal(t = null) {
+  const x = t || { title: '', date: ymd(new Date()), time: '', mode: 'auto', notes: '', done: false };
+  openModal(t ? 'Editar salida' : 'Nueva salida', `
+    <label class="fld"><span>Nombre</span><input name="title" required maxlength="80" value="${esc(x.title)}" placeholder="Trámites del sábado, compras para la clase…"></label>
+    <div class="row2">
+      <label class="fld"><span>Fecha (opcional)</span><input type="date" name="date" value="${x.date || ''}"></label>
+      <label class="fld"><span>Hora de salida</span><input type="time" name="time" value="${x.time || ''}"></label>
+    </div>
+    <label class="fld"><span>Cómo vas</span><select name="mode">${Object.entries(TR_MODES).map(([k, [l]]) => `<option value="${k}" ${(x.mode || 'auto') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="fld"><span>Notas</span><textarea name="notes" rows="2" placeholder="Llevar bolsas, la carpeta, efectivo…">${esc(x.notes)}</textarea></label>
+    ${t ? `<label class="toggle"><input type="checkbox" name="done" ${x.done ? 'checked' : ''}> <span>Ya fui</span></label>` : ''}`, {
+    onSave: fd => {
+      const obj = { title: fd.get('title').trim(), date: fd.get('date'), time: fd.get('time'), mode: fd.get('mode'), notes: fd.get('notes').trim(), done: fd.get('done') === 'on' };
+      if (t) Object.assign(t, obj);
+      else { const n = { id: uid(), created: Date.now(), stops: [], ...obj }; S.trips.push(n); trSel = n.id; trView = null; trResults = []; }
+      save(); renderAll();
+    },
+    onDelete: t ? () => { S.trips = S.trips.filter(y => y !== t); trSel = null; save(); renderAll(); } : null,
+  });
+}
+function trAddStop(t, d) {
+  t.stops.push({ id: uid(), name: d.name, address: d.address || '', lat: +Number(d.lat).toFixed(6), lng: +Number(d.lng).toFixed(6), time: d.time || '', budget: d.budget || 0, notes: d.notes || '', done: false, items: [] });
+  trView = null; save(); renderAll();
+}
+function trStopModal(t, x = null, at = {}) {
+  const v = x || { name: '', address: '', time: '', budget: 0, notes: '' };
+  openModal(x ? 'Editar parada' : 'Agregar parada', `
+    <label class="fld"><span>Nombre</span><input name="name" required maxlength="80" value="${esc(v.name)}" placeholder="Farmacia, librería, banco…"></label>
+    <label class="fld"><span>Dirección</span><input name="address" maxlength="160" value="${esc(v.address)}"></label>
+    <div class="row2">
+      <label class="fld"><span>Hora</span><input type="time" name="time" value="${v.time || ''}"></label>
+      <label class="fld"><span>Presupuesto</span><input name="budget" inputmode="decimal" value="${v.budget ? fmtIn(v.budget) : ''}" placeholder="0"></label>
+    </div>
+    <label class="fld"><span>Notas</span><textarea name="notes" rows="2" placeholder="Horario, a quién preguntar…">${esc(v.notes)}</textarea></label>
+    ${x ? '' : '<p class="hint" style="margin:0">Las cosas que vas a buscar se agregan en la parada.</p>'}`, {
+    onOpen: x ? null : f => {
+      // Nombre y dirección sugeridos por Photon (si aún no los escribiste).
+      fetch(`https://photon.komoot.io/reverse?lat=${at.lat}&lon=${at.lng}`).then(r => r.json()).then(j => {
+        const pr = j.features?.[0]?.properties;
+        if (!pr || !f.isConnected) return;
+        const street = [pr.street, pr.housenumber].filter(Boolean).join(' ');
+        if (!f.elements.name.value) f.elements.name.value = pr.name || street;
+        if (!f.elements.address.value) f.elements.address.value = [street, pr.city || pr.county].filter(Boolean).join(', ');
+      }).catch(() => {});
+    },
+    onSave: fd => {
+      const b = fd.get('budget').trim() ? parseAmount(fd.get('budget')) : 0;
+      if (!(b >= 0)) return 'Revisa el presupuesto.';
+      const obj = { name: fd.get('name').trim(), address: fd.get('address').trim(), time: fd.get('time'), budget: b, notes: fd.get('notes').trim() };
+      if (x) { Object.assign(x, obj); save(); renderAll(); }
+      else trAddStop(t, { ...obj, lat: at.lat, lng: at.lng });
+    },
+    onDelete: x ? () => { t.stops = t.stops.filter(y => y !== x); trView = null; save(); renderAll(); } : null,
+  });
+}
+Object.assign(ACT, {
+  trNew: () => trModal(),
+  trEdit: () => { const t = trCur(); t && trModal(t); },
+  trPick: el => { trSel = el.dataset.id; trView = null; trResults = []; renderAll(); },
+  trMode: el => { const t = trCur(); if (!t) return; t.mode = el.dataset.m; save(); renderAll(); },
+  trDup: () => {
+    const t = trCur(); if (!t) return;
+    const n = { ...structuredClone(t), id: uid(), created: Date.now(), title: `${t.title} (copia)`.slice(0, 80), date: '', done: false };
+    n.stops.forEach(x => { x.id = uid(); x.done = false; x.items.forEach(i => { i.id = uid(); i.done = false; }); });
+    S.trips.push(n); trSel = n.id; trView = null; save(); renderAll();
+    toast({ title: 'Salida duplicada', text: 'Ponle fecha cuando la tengas', icon: 'copy' });
+  },
+  trStopDone: el => { const [, x] = trStop(el.dataset.id); if (!x) return; x.done = !x.done; save(); renderAll(); },
+  trStopEdit: el => { const [t, x] = trStop(el.dataset.id); x && trStopModal(t, x); },
+  trStopMove: el => {
+    const [t, x] = trStop(el.dataset.id); if (!x) return;
+    const i = t.stops.indexOf(x), j = i + Number(el.dataset.d);
+    if (j < 0 || j >= t.stops.length) return;
+    [t.stops[i], t.stops[j]] = [t.stops[j], t.stops[i]];
+    save(); renderAll();
+  },
+  trItemDel: el => {
+    const [t, x] = trStop(el.dataset.id); if (!x) return;
+    x.items = x.items.filter(i => i.id !== el.dataset.item);
+    save(); el.closest('.tr-items').outerHTML = trItemsHtml(x); trCounts(t);
+  },
+  trResAdd: el => { const t = trCur(), r = trResults[Number(el.dataset.i)]; if (!t || !r) return; trAddStop(t, { name: r.name, address: r.addr, lat: r.lat, lng: r.lng }); toast({ title: 'Parada agregada', text: r.name, icon: 'map-pin' }); },
+  trResClear: () => { trResults = []; trLastQ = ''; renderAll(); },
+});
+Object.assign(CHG, {
+  trItem: el => {
+    const [t, x] = trStop(el.dataset.id), it = x && findById(x.items, el.dataset.item); if (!it) return;
+    it.done = el.checked; save();
+    el.closest('li').classList.toggle('done', it.done); trCounts(t);
+  },
+  trStopTime: el => { const [, x] = trStop(el.dataset.id); if (!x) return; x.time = el.value; save(); },
+  trStopBudget: el => {
+    const [t, x] = trStop(el.dataset.id); if (!x) return;
+    const v = el.value.trim() ? parseAmount(el.value) : 0;
+    if (!(v >= 0)) { el.value = x.budget ? fmtIn(x.budget) : ''; return toast({ title: 'Revisa el presupuesto', icon: 'warning' }); }
+    x.budget = v; save(); trCounts(t);
+  },
+  trFromPlace: el => { const t = trCur(), p = findById(S.places, el.value); if (!t || !p) return; trAddStop(t, { name: p.name, address: p.address, lat: p.lat, lng: p.lng }); },
+});
+Object.assign(FORMS, {
+  trSearch: async f => {
+    const q = f.elements.q.value.trim();
+    if (!q) return;
+    trLastQ = q;
+    try {
+      trResults = await photon(q, trMap && trMap.getCenter());
+      if (!trResults.length) { toast({ title: 'Sin resultados', text: q, icon: 'magnifying-glass' }); return; }
+      renderAll();
+    } catch { toast({ title: 'No pude buscar', text: 'Revisa tu conexión a internet.', icon: 'warning' }); }
+  },
+  trItemAdd: f => {
+    const [t, x] = trStop(f.dataset.id), text = f.elements.text.value.trim();
+    if (!x || !text) return;
+    x.items.push({ id: uid(), text, done: false });
+    save();
+    $('.tr-items', f.parentElement).outerHTML = trItemsHtml(x);
+    f.elements.text.value = ''; f.elements.text.focus();
+    trCounts(t);
+  },
+});
+
 /* ---------- Versículos (memorización) ---------- */
 const VS_INTERVALS = [0, 1, 2, 4, 7, 14, 30];   // días hasta el próximo repaso según el nivel
 const VS_STATUS = { aprendiendo: 'Aprendiendo', casi: 'Casi', memorizado: 'Memorizado' };
@@ -6861,6 +7192,8 @@ const searchSources = () => [
       open: () => { go('cumples'); bdModal(b); } })) },
   { label: 'Lugares', icon: 'map-pin', items: () => S.places.map(p => ({ title: p.name, sub: p.address || (PLACE_CATS[p.cat] || PLACE_CATS.otro)[0], fields: [p.name, p.address, p.notes],
       open: () => { mapView = { c: [p.lat, p.lng], z: 17 }; go('lugares'); setTimeout(() => placeMarkers.get(p.id)?.openPopup(), 900); } })) },
+  { label: 'Salidas', icon: 'path', items: () => S.trips.map(t => ({ title: t.title, sub: [t.date ? shortDate(t.date) : 'Sin fecha', `${t.stops.length} ${t.stops.length === 1 ? 'parada' : 'paradas'}`].join(' · '),
+      fields: [t.title, t.notes, ...t.stops.flatMap(x => [x.name, x.address, x.notes, ...x.items.map(i => i.text)])], open: () => { trSel = t.id; trView = null; go('salidas'); } })) },
   { label: 'Finanzas', icon: 'wallet', items: () => S.money.map(m => ({ title: m.note || mvCat(m)[0], sub: `${shortDate(m.date)} · ${m.type === 'ingreso' ? '+' : '−'}${money(m.amount)}`, fields: [m.note, mvCat(m)[0]],
       open: () => { const d = fromYmd(m.date); finMonth = new Date(d.getFullYear(), d.getMonth(), 1); go('finanzas'); mvModal(m); } })) },
   { label: 'Me deben', icon: 'hand-coins', items: () => S.owed.map(o => ({ title: o.what, sub: `${o.who} · ${money(o.amount)} · ${o.paid ? 'Pagado' : 'Pendiente'}`, fields: [o.what, o.who],
